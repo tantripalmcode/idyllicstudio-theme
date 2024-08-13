@@ -1,0 +1,120 @@
+.pc-event-slider {
+    margin: 0 -12px;
+    padding: 15px 12px;
+}
+
+.pc-event-slider__item {
+    display: block;
+    border-radius: 8px;
+    padding: 16px;
+    box-shadow: 0px 4px 18px 0px rgba(15, 15, 11, 0.08);
+    color: var(--body-text-color);
+}
+
+.pc-event-slider__item-image {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border-radius: 8px;
+    margin-bottom: 24px;
+}
+
+.palm-code .pc-event-slider__item-title {
+    margin-bottom: 8px;
+    font-size: 20px;
+    line-height: 1.2em;
+}
+
+.pc-event-slider__item-desc {
+    margin-bottom: 16px;
+    font-size: 14px;
+    color: #7F7F7E;
+}
+
+.pc-event-slider__item-footer {
+    gap: 15px;
+}
+
+.pc-event-slider__item-button {
+    display: inline-block;
+    padding: 8px 16px;
+    background-color: #EDE1D1;
+    border-radius: 8px;
+    font-size: 14px;
+    transition: background-color 0.5s ease;
+}
+.pc-event-slider__item-button:hover{
+    background-color: var(--button-color-hover);
+}
+
+.pc-event-slider__item-price{
+    max-width: 109px;
+    font-size: 14px;
+}
+
+/* Slider Arrow */
+.pc-event-slider__wrapper .swiper-arrow::after {
+    display: none;
+}
+
+.pc-event-slider__wrapper .swiper-arrow {
+    width: 35px;
+    height: 27px;
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: 15px;
+}
+
+.pc-event-slider__wrapper .swiper-arrow.swiper-button-prev {
+    background-image: url("data:image/svg+xml,%3Csvg width='11' height='19' viewBox='0 0 11 19' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M9.36 17.5L2.39865 9.93332C2.17331 9.68838 2.17331 9.31162 2.39865 9.06668L9.36 1.5' stroke='%23C19A6B' stroke-width='2.56' stroke-linecap='round'/%3E%3C/svg%3E%0A");
+    left: -30px;
+}
+
+.pc-event-slider__wrapper .swiper-arrow.swiper-button-next {
+    background-image: url("data:image/svg+xml,%3Csvg width='11' height='19' viewBox='0 0 11 19' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1.64 17.5L8.60135 9.93332C8.82669 9.68838 8.82669 9.31162 8.60135 9.06668L1.64 1.5' stroke='%23C19A6B' stroke-width='2.56' stroke-linecap='round'/%3E%3C/svg%3E%0A");
+    right: -30px;
+}
+
+@media(max-width: 992px) {
+    .pc-event-slider {
+        margin: 0;
+        padding: 15px 20px;
+    }
+
+    .pc-event-slider__item {
+        box-shadow: none;
+    }
+
+    .pc-event-slider__item-image {
+        box-shadow: 0px 4px 18px rgba(15, 15, 11, 0.15);
+    }
+
+    .pc-event-slider__wrapper .swiper-arrow {
+        margin-top: 20px;
+    }
+
+    .pc-event-slider__wrapper .swiper-arrow.swiper-button-next {
+        right: 10px;
+    }
+
+    .pc-event-slider__wrapper .swiper-arrow.swiper-button-prev {
+        left: 10px;
+    }
+}
+
+@media(max-width: 767px) {
+    .pc-event-slider__item-button {
+        display: block;
+    }
+}
+
+@media (max-width: 380px) {
+    .pc-event-slider__item-footer{
+        flex-direction: column-reverse;
+        align-items: flex-start !important;
+    }
+}
+
+.single-em_event .post-navigation{
+    display: none;
+}

@@ -1,0 +1,168 @@
+/* ===========================================
+| Event Single
+=========================================== */
+/* Horizontal line */
+.is-event-horizontal-line{
+  border: none;
+  border-top: 1px solid rgba(0, 0, 0, 0.10);
+}
+
+/* Spacing */
+div#event-headline,
+div#event-content,
+div#event-other-course{
+    margin-top: 48px;
+    margin-bottom: 48px;
+}
+
+.ep-modal .ep-modal-body{
+  padding: 48px;
+}
+.ep-modal .ep-modal-body #ep_event_ticket_modal_right{
+  padding: 32px 24px;
+  border-radius: 8px;
+  border: 1px solid #DADADA;
+}
+
+/* Event Headline */
+#event-headline .is-event-discount{
+  padding: 6px 12px;
+  background-color: var(--secondary-color);
+  margin-bottom: 16px;
+}
+#event-headline .is-event-discount span{
+  font-size: 12px;
+}
+#event-headline .is-event-info span{
+  font-size: 14px;
+  margin-left: 4px;
+}
+.is-event-headline{
+  margin-right: 48px;
+}
+.is-event-price__prefix{
+  color: var(--body-text-color) !important;
+  font-size: 14px;
+}
+.is-event-price__suffix{
+  color: var(--body-text-color) !important;
+}
+
+@media (max-width: 767px) {
+  .is-event-headline{
+    margin-right: 0;
+  }
+}
+
+/* Event Content */
+#event-content h4{
+  margin-bottom: 24px;
+}
+#event-content .pc-event-description,
+#event-content .pc-event-included-service{
+  margin-bottom: 32px;
+}
+#event-content #ep_single_event_ticket_now_wrapper div.ep-btn-light{
+  background-color: var(--custom-color);
+  color: var(--primary-color) !important;
+}
+
+/* CTA */
+#event-content .ep-box-row{
+  border: 1px solid #00000021;
+  margin: 0px 0px 0px 48px;
+  padding: 24px 16px 8px;
+}
+
+@media (max-width: 767px) {
+  #event-content .ep-box-row{
+    margin: 0px;
+  }
+  .ep-modal .ep-modal-body{
+    padding: 8px;
+  }
+}
+
+/* Ticket */
+#ep-event-ticket-checkout-modal .ep-modal-content{
+  background-color: transparent !important;
+}
+#ep-event-ticket-checkout-modal .ep-box-row{
+  background-color: #fff;
+}
+
+/* Checkout */
+.ep-box-row .ep-bg-warning{
+  background-color: var(--secondary-color);
+}
+
+.ep-box-row .ep-border-warning{
+  border-color: var(--secondary-color) !important;
+}
+
+.ep-box-row #ep_event_booking_checkout_btn{
+  background-color: var(--secondary-color) !important;
+}
+
+.ep-checkout-img-icon{
+  max-height: 100px !important;
+}
+
+@media (max-width: 359px) {
+  .ep-checkout-img-icon{
+    max-height: 190px !important;
+    margin-bottom: 24px;
+  }
+}
+
+/* login page */
+.ep-booking-container.ep-box-wrap .ep-box-row{
+  justify-content: center;
+  overflow-x: auto;
+}
+
+/* Event Hero Galleries - Global */
+div#event-gallery{
+    margin-bottom: 80px;
+    height: 450px;
+    overflow: hidden;
+}
+div#event-gallery img{
+    object-fit: cover;
+    width: 100%;
+    height: 100%;
+}
+div#event-gallery > div{
+    height: 100%;
+}
+/* Event Hero Galleries - 4 Img */
+div#event-gallery > .img-4{
+    height: 213px !important;
+}
+div#event-gallery > .img-4:nth-child(-n+2) {
+    margin-bottom: 30px;
+}
+/* Event Hero Galleries - 5 Img */
+div#event-gallery .img-5 .row > div{
+    height: 213px;
+}
+div#event-gallery .img-5 .row > div:nth-child(-n+2) {
+    margin-bottom: 24px;
+}
+
+@media (max-width: 767px) {
+    .pc-event-gallery__mobile-wrapper .swiper-slide{
+        height: 450px !important;
+        overflow: hidden;
+    }
+    .pc-event-gallery__mobile-wrapper .swiper-slide img{
+        object-fit: cover;
+        height: 100%;
+    }
+}
+
+@media (max-width: 450px) {
+    .pc-event-gallery__mobile-wrapper .swiper-slide{
+        height: 250px !important;
+    }
+}
