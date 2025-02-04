@@ -681,8 +681,12 @@ div.is-reservation-calendar #ep_event_calendar.fc .fc-toolbar.fc-header-toolbar 
   color: var(--header-menu-color-hover);
 }
 
-.is-site-footer__navigation .pc-footer_widget.footer_2 .menu li:first-child {
+.is-site-footer__navigation .pc-footer_widget.footer_2 .menu li {
   margin-right: 8px;
+}
+
+.is-site-footer__navigation .pc-footer_widget.footer_2 .menu li:last-child{
+	margin-right: 0;
 }
 
 .is-site-footer__navigation .pc-footer_widget.footer_2 .menu li:not(:last-child):after {
@@ -955,4 +959,12 @@ body.home .pc-booking-form .pc-booking-form__content {
 .privacy-policy .page-content .index :target {
 	padding-top: 50px;
 	margin-top: -50px;
+}
+
+/* Popup Maker */
+.popmake-content img{
+	width: auto;
+    height: 80vh;
+    margin: 0;
+    object-fit: contain;
 }

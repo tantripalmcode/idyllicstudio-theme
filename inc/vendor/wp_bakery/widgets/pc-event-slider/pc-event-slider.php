@@ -69,7 +69,8 @@ class PCEventSlider
                             $post_title        = get_the_title();
                             $post_link         = esc_url( get_permalink() );  
                             $post_content      = get_the_content();
-                            $post_content      = substr( wp_strip_all_tags( $post_content ), 0, '115' ) . ' ...';
+                            // $post_content      = substr( wp_strip_all_tags( $post_content ), 0, '115' ) . ' ...';
+                            $post_content      = wp_trim_words( get_the_content(), 21 );
                             // $price          = pc_get_event_price( $post_id, true );
                             $price             = get_field('price-group')['price'];
                             $post_thumbnail_id = get_post_thumbnail_id( $post_id );

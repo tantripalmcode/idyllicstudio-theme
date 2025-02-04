@@ -49,6 +49,14 @@ function ajax_pc_check_availability()
         $max_capacity        = (int)$max_capacity - $total_capacity_used;
         $max_capacity        = $max_capacity <= 0 ? 0 : $max_capacity;
 
+        $total_booked_on_that_day = get_total_book_on_the_day($selected_date, $time_selected);
+        $available_capcaity_left_on_that_day = PC_MAX_CAPACITY_PER_TIME_SLOT - $total_booked_on_that_day;
+
+        if($max_capacity > $available_capcaity_left_on_that_day){
+            $max_capacity = $available_capcaity_left_on_that_day;
+        }
+        $max_capacity  = $max_capacity <= 0 ? 0 : $max_capacity;
+
         // Get availability dates
         $availability_dates = get_field('pc_availability_date', $event_id);
         $dates = [];
@@ -178,4 +186,58 @@ function get_data_event_booking_capacity($event_id, $date, $time)
     }
 
     return (int) $total_capacity;
+}
+
+
+/**
+ * Get data event booking capacity
+ */
+function get_total_book_on_the_day($date, $time)
+{
+    $date         = $date ?: date('Ymd');
+    $time         = str_replace(' ', '', $time);
+    $time         = $time ? explode('-', $time) : '';
+    $start_time   = $time ? $time[0] : '';
+    $end_time     = $time ? $time[1] : '';
+
+    // Get event booking posts
+    $event_bookings = get_posts(
+        array(
+            'post_type' => 'event-booking',  // Change 'post' to your custom post type if needed
+            'posts_per_page' => -1,  // Get all posts
+            'post_status' => ['publish'],
+            'meta_query' => array(
+                'relation' => 'AND',
+                array(
+                    'key' => 'pc_date',
+                    'value' => $date,
+                    'compare' => '=',
+                    'type' => 'DATE',
+                ),
+                array(
+                    'key' => 'pc_start_time',
+                    'value' => $start_time,
+                    'compare' => '=',
+                ),
+                array(
+                    'key' => 'pc_end_time',
+                    'value' => $end_time,
+                    'compare' => '=',
+                ),
+            ),
+        )
+    );
+
+    $total_booked = 0;
+
+    if ($event_bookings) {
+        foreach ($event_bookings as $event_booking) {
+            $event_booking_id = $event_booking->ID;
+            $event_booking_kapasitat = get_field('pc_kapazitat', $event_booking_id);
+
+            $total_booked = $total_booked + (int) $event_booking_kapasitat;
+        }
+    }
+
+    return (int) $total_booked;
 }

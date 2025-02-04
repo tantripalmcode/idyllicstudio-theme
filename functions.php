@@ -24,6 +24,7 @@ define('PC_CHILD_ASSETS_JS_URL', PC_CHILD_ASSETS_URL . '/js');
 define('PC_CHILD_ASSETS_IMAGE_URL', PC_CHILD_ASSETS_URL . '/images');
 define('PC_CHILD_ASSETS_FONT_URL', PC_CHILD_ASSETS_URL . '/fonts');
 define('PC_CHILD_ASSETS_FONT_PATH', PC_CHILD_ASSETS_PATH . '/fonts');
+define('PC_MAX_CAPACITY_PER_TIME_SLOT', 20);
 
 // Custom Define
 define('PALMCODE_HEADER_CTA_LENGTH', 3);
@@ -163,3 +164,50 @@ function disable_plugin_updates( $value ) {
 
 // Hook into the 'site_transient_update_plugins' filter
 add_filter( 'site_transient_update_plugins', 'disable_plugin_updates' );
+
+// Disable support for comments and trackbacks in post types
+function disable_comments_post_types_support() {
+    $post_types = get_post_types();
+    foreach ($post_types as $post_type) {
+        if (post_type_supports($post_type, 'comments')) {
+            remove_post_type_support($post_type, 'comments');
+            remove_post_type_support($post_type, 'trackbacks');
+        }
+    }
+}
+add_action('admin_init', 'disable_comments_post_types_support');
+
+// Close comments on the front-end
+function disable_comments_status() {
+    return false;
+}
+add_filter('comments_open', 'disable_comments_status', 20, 2);
+add_filter('pings_open', 'disable_comments_status', 20, 2);
+
+// Hide existing comments
+function disable_comments_hide_existing_comments($comments) {
+    return array();
+}
+add_filter('comments_array', 'disable_comments_hide_existing_comments', 10, 2);
+
+// Remove comments page from admin menu
+function disable_comments_admin_menu() {
+    remove_menu_page('edit-comments.php');
+}
+add_action('admin_menu', 'disable_comments_admin_menu');
+
+// Redirect any user trying to access comments page
+function disable_comments_admin_menu_redirect() {
+    global $pagenow;
+    if ($pagenow === 'edit-comments.php') {
+        wp_redirect(admin_url());
+        exit;
+    }
+}
+add_action('admin_init', 'disable_comments_admin_menu_redirect');
+
+// Remove comments metabox from dashboard
+function disable_comments_dashboard() {
+    remove_meta_box('dashboard_recent_comments', 'dashboard', 'normal');
+}
+add_action('admin_init', 'disable_comments_dashboard');

@@ -116,6 +116,13 @@
             behavior: "smooth",
           });
         }
+
+        // document
+        //   .querySelector(".pc-simple-header-menu__mobile.pc-open")
+        //   ?.classList.remove("pc-open");
+        // document
+        //   .querySelector("#pc-primary-overlay.pc-active")
+        //   ?.classList.remove("pc-active");
       });
     });
   });
@@ -168,9 +175,7 @@
           return [isAvailable, ""];
         } else {
           var day = date.getDay();
-
-          // Only show day that not monday and tuesday
-          return [day != 1 && day != 2];
+          return [day != 1];
         }
       },
       onSelect: function (dateText, inst) {
@@ -182,16 +187,15 @@
 
         $("[name=zeit]").removeClass("pc-selected").val("");
         $("[name=datum_format]").val(formattedDate);
-        updateNoteCalendar();
         ajax_check_availability();
       },
     });
   }
 
   /**
-   * Booking form configuration and event handling
+   * Booking form config
    */
-  function bookingFormConfig() {
+  function booking_form_config() {
     // Form group check
     $(".pc-booking-form-fields .form-group").each(function () {
       const $this = $(this);
@@ -240,6 +244,19 @@
     }, 300);
 
     // Zeit on change
+    // $zeit_field.on("change", function () {
+    //   const $this = $(this);
+    //   const timeString = $this.val();
+    //   const [startTime, endTime] = timeString.split(" - ");
+
+    //   const startTimeFormatted = startTime.replace(":", "");
+    //   const endTimeFormatted = endTime.replace(":", "");
+
+    //   document.getElementsByName("event-start-time")[0].value =
+    //     startTimeFormatted;
+    //   document.getElementsByName("event-end-time")[0].value = endTimeFormatted;
+    // });
+    // Zeit on change
     $zeit_field.on("change", function () {
       const $this = $(this);
       const timeString = $this.val();
@@ -252,7 +269,7 @@
         startTimeFormatted;
       document.getElementsByName("event-end-time")[0].value = endTimeFormatted;
 
-      // Update start_date_time and end_date_time
+      // Add this block to update start_date_time
       const formattedDate = $("[name=datum_format]").val();
       if (formattedDate && startTimeFormatted) {
         $("[name=start_date_time]").val(
@@ -263,137 +280,28 @@
         );
       }
     });
+  }
 
-    // Event listener for kurse field change
+  /**
+   * Function on change kurse form
+   */
+  function select_course_form() {
     $(document).on("change", "[name=kurse]", function () {
-      updateTitleCalendar();
       const $zeit_field = $("[name=zeit]");
       const $kapazitat_field = $("[name=kapazitat]");
       const $datum_field = $(".pc-event-datum");
 
-      // Disable and clear the 'zeit' and 'kapazitat' fields
-      $zeit_field.prop("disabled", true).removeClass("pc-selected").val("");
+      $zeit_field.prop("disabled", true);
       $kapazitat_field.prop("disabled", true);
+      $zeit_field.removeClass("pc-selected").val("");
 
-      // If the selected course is "Painting Night", also disable and clear the 'datum' field
       if ($(this).val() === "Painting Night") {
-        $datum_field.prop("disabled", true).val("");
-      } else {
-        $datum_field.prop("disabled", false); // Enable the 'datum' field for other courses
+        $datum_field.prop("disabled", true);
+        $datum_field.val("");
       }
 
-      // Call the function to check availability
       ajax_check_availability();
     });
-
-    // Event listener for kapazitat field change
-    $(document).on(
-      "change",
-      "[name=kapazitat], [name=vorname], [name=nachname]",
-      function () {
-        updateTitleCalendar();
-      }
-    );
-
-    // Event listener for vorname field change
-    // $(document).on("change", "[name=vorname]", function () {
-    //   updateTitleCalendar();
-    // });
-
-    // // Event listener for vorname field change
-    // $(document).on("change", "[name=nachname]", function () {
-    //   updateTitleCalendar();
-    // });
-
-    $(document).on(
-      "change",
-      "[name=kurse], [name=kapazitat], [name=vorname], [name=nachname], [name=email-address], [name=telefonnummer], .pc-event-datum, [name=zeit]",
-      function () {
-        updateTitleCalendar();
-        updateNoteCalendar();
-      }
-    );
-
-    // Function to update title_calendar
-    function updateTitleCalendar() {
-      const $kurse_field = $("[name=kurse]");
-      const $kapazitat_field = $("[name=kapazitat]");
-      const $vorname_field = $("[name=vorname]");
-      const $nachname_field = $("[name=nachname]");
-      const $title_calendar_field = $("[name=title_calendar]");
-
-      // Get the values of kurse, kapazitat, and vorname
-      const kurseValue = $kurse_field.val();
-      const kapazitatValue = $kapazitat_field.val();
-      const vornameValue = $vorname_field.val();
-      const nachnameValue = $nachname_field.val();
-
-      // Combine values and update title_calendar
-      if (vornameValue) {
-        $title_calendar_field.val(
-          `${vornameValue} ${nachnameValue} - ${kapazitatValue || ""} - ${
-            kurseValue || ""
-          }`
-        );
-      } else {
-        $title_calendar_field.val("");
-      }
-    }
-  }
-
-  /**
-   * Function to update note_calendar
-   */
-  function updateNoteCalendar() {
-    const $kurse_field = $("[name=kurse]");
-    const $kapazitat_field = $("[name=kapazitat]");
-    const $vorname_field = $("[name=vorname]");
-    const $nachname_field = $("[name=nachname]");
-    const $email_field = $("[name=email-address]");
-    const $telefonnummer_field = $("[name=telefonnummer]");
-    const $datum_field = $(".pc-event-datum");
-    const $zeit_field = $("[name=zeit]");
-    const $note_calendar_field = $("[name=note_calendar]");
-
-    // Get the values of the fields
-    const vornameValue = $vorname_field.val();
-    const nachnameValue = $nachname_field.val();
-    const emailValue = $email_field.val();
-    const telefonnummerValue = $telefonnummer_field.val();
-    const kurseValue = $kurse_field.val();
-    const datumValue = $datum_field.val();
-    const zeitValue = $zeit_field.val();
-    const kapazitatValue = $kapazitat_field.val();
-
-    // Construct the note_calendar content with line breaks and labels
-    let noteContent = "";
-    if (vornameValue) {
-      noteContent += `<strong>Vorname:</strong> ${vornameValue}<br>`;
-    }
-    if (nachnameValue) {
-      noteContent += `<strong>Nachname:</strong> ${nachnameValue}<br>`;
-    }
-    if (emailValue) {
-      noteContent += `<strong>Email-Adresse:</strong> ${emailValue}<br>`;
-    }
-    if (telefonnummerValue) {
-      noteContent += `<strong>Telefonnummer:</strong> ${telefonnummerValue}<br>`;
-    }
-    if (kurseValue) {
-      noteContent += `<strong>Kurse:</strong> ${kurseValue}<br>`;
-    }
-    if (datumValue) {
-      noteContent += `<strong>Datum:</strong> ${datumValue}<br>`;
-    }
-    if (zeitValue) {
-      noteContent += `<strong>Zeit:</strong> ${zeitValue}<br>`;
-    }
-    if (kapazitatValue) {
-      noteContent += `<strong>Kapazität:</strong> ${kapazitatValue}<br>`;
-    }
-
-    // Update the note_calendar field
-    $note_calendar_field.html(noteContent);
   }
 
   /**
@@ -618,7 +526,8 @@
   }
 
   $(document).ready(function () {
-    bookingFormConfig();
+    booking_form_config();
+    select_course_form();
     select_time_form();
     auto_selected_event();
     cf7_email_sent_callback();
