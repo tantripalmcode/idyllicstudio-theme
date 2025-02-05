@@ -143,3 +143,52 @@ function save_booking_form_submission( $contact_form ) {
         }
     }
 }
+
+
+/**
+ * Validation kapazitat
+ */
+function custom_validate_kapazitat( $result, $tag ) {
+    if ( $tag->name !== 'kapazitat' ) {
+        return $result;
+    }
+
+    $value = isset($_POST['kapazitat']) ? sanitize_text_field($_POST['kapazitat']) : '';
+
+    // Get the selected course, date, and time from the form
+    $course        = isset($_POST['kurse']) ? sanitize_text_field($_POST['kurse']): '';
+    $datum         = isset($_POST['datum_format']) ? sanitize_text_field($_POST['datum_format'])  : '';
+    $time_selected = isset($_POST['zeit']) ? sanitize_text_field($_POST['zeit'])    : '';
+
+    if (empty($course) || empty($datum) || empty($time_selected)) {
+        $result->invalidate( $tag, 'Bitte wählen Sie einen Kurs, ein Datum und eine Zeit aus asdasd.' );
+        return $result;
+    }
+
+    // Get the event ID based on the course title
+    $event_id = pc_get_post_id_by_post_title('em_event', $course);
+
+    if (!$event_id) {
+        $result->invalidate( $tag, 'Der ausgewählte Kurs ist ungültig.' );
+        return $result;
+    }
+
+    $event_id = pc_get_post_id_by_post_title('em_event', $course);
+    if (!$event_id) {
+        $result->invalidate( $tag, 'Der ausgewählte Kurs ist ungültig.' );
+        return $result;
+    }
+
+    $total_capacity_used = get_data_event_booking_capacity($event_id, $datum, $time_selected);
+    $max_capacity = get_field('pc_maximum_capacity', $event_id);
+    $available_capacity  = (int)$max_capacity - $total_capacity_used;
+
+
+    // Ensure the selected capacity does not exceed the available capacity
+    if ($value > $available_capacity) {
+        $result->invalidate( $tag, 'Die ausgewählte Kapazität übersteigt die verfügbare Kapazität für diesen Zeitraum.' );
+    }
+
+    return $result;
+}
+add_filter( 'wpcf7_validate_select*', 'custom_validate_kapazitat', 10, 2 );
