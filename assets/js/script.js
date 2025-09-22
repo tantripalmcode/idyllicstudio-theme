@@ -561,6 +561,13 @@
           $thankyou_box.find(".pc-reservation-person").text(kapazitat);
           $thankyou_box.find(".pc-reservation-time").text(zeit);
           $thankyou_box.find(".pc-reservation-course").text(kurse);
+        }else if(form_id === 2267){
+          const $form_fields = $(".pc-booking-form-fields");
+          $form_fields.find(".pc-availability").html("");
+          const $thankyou_box = $(".pc-thankyou__box");
+
+          $form_fields.toggleClass("d-none");
+          $thankyou_box.toggleClass("d-none");
         }
       },
       false
@@ -617,6 +624,34 @@
     });
   }
 
+  function event_popup_drawing_toy() {
+    jQuery(document).ready(function () {
+      if (jQuery(".pc-popup-button").length > 0) {
+        console.log("test");
+        const $button = jQuery(".pc-popup-button");
+
+        $button.on("click", function (e) {
+          const $this = jQuery(this);
+          const $popup = $this.parents(".pum-container");
+
+          if ($popup.length > 0) {
+            $popup.find('.pum-close').trigger('click');
+          }
+        });
+      }
+    });
+  }
+	
+	// 	Coupon Floating
+	function toggle_coupon_box_floating() {
+	  jQuery(document).ready(function () {
+		jQuery(".coupon-box-floating-icon").on("click", function () {
+		  const $parentBox = jQuery(this).closest(".coupon-box-floating");
+		  $parentBox.toggleClass("active");
+		});
+	  });
+	}
+
   $(document).ready(function () {
     bookingFormConfig();
     select_time_form();
@@ -624,5 +659,7 @@
     cf7_email_sent_callback();
     thankyou_button_config();
     anchor_position_datenschutz();
+    event_popup_drawing_toy();
+	toggle_coupon_box_floating();
   });
 })(jQuery);

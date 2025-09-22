@@ -211,3 +211,22 @@ function disable_comments_dashboard() {
     remove_meta_box('dashboard_recent_comments', 'dashboard', 'normal');
 }
 add_action('admin_init', 'disable_comments_dashboard');
+
+/**
+ * Add Body Class
+ */
+if (!function_exists('pc_custom_body_classes')) {
+    function pc_custom_body_classes($classes)
+    {
+        global $post;
+
+        $show_sticky_banner = get_post_meta( $post->ID, 'show_sticky_banner', true );
+
+        if( $show_sticky_banner ){
+            $classes[] = 'pc-show-sticky-banner';
+        }
+
+        return $classes;
+    }
+    add_filter('body_class', 'pc_custom_body_classes');
+}

@@ -142,6 +142,44 @@ function save_booking_form_submission( $contact_form ) {
             }
         }
     }
+
+    if($contact_form->id() === 2267){
+        $submission = WPCF7_Submission::get_instance();
+        
+        if ( $submission ) {
+            $posted_data = $submission->get_posted_data();
+
+            $vorname       = $posted_data['vorname'];
+            $nachname      = $posted_data['nachname'];
+            $telefonnummer = $posted_data['telefonnummer'];
+            $email_address = $posted_data['email-address'];
+            $kurse         = $posted_data['kurse'];
+
+            $unique_id = uniqid();
+            $unique_number = substr( $unique_id, -6 );
+            
+            // Prepare post data
+            $post_data = array(
+                'post_title'    => "#drawing_toy_{$unique_number} - Event booking from {$vorname} {$nachname}",
+                'post_type'     => 'event-booking',
+                'post_status'   => 'publish',
+            );
+
+            // Insert the post into the database
+            $booking_id = wp_insert_post( $post_data );
+
+            if ( $booking_id ) {
+                $event_id  = pc_get_post_id_by_post_title( 'em_event', $kurse );
+                $datum = date( "Ymd", strtotime( $datum ) );
+
+                update_post_meta( $booking_id, 'pc_vorname', $vorname );
+                update_post_meta( $booking_id, 'pc_nachname', $nachname );
+                update_post_meta( $booking_id, 'pc_telefonnummer', $telefonnummer );
+                update_post_meta( $booking_id, 'pc_email_address', $email_address );
+                update_post_meta( $booking_id, 'pc_event', $event_id );
+            }
+        }
+    }
 }
 
 
