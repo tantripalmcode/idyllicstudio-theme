@@ -1,5 +1,7 @@
 <?php
-global $header_settings;
+global $header_settings, $post;
+
+$show_sticky_banner = get_post_meta( $post->ID, 'show_sticky_banner', true );
 ?>
 
 <?php
@@ -42,6 +44,16 @@ global $header_settings;
 	<div id="page" class="pc-site">
 
 		<div id="pc-primary-overlay"></div>
+
+		<?php if( $show_sticky_banner ): ?>
+			<div class="pc-sticky-banner">
+				<div class="pc-container container">
+					<div class="pc-sticky-banner-content text-center">
+						<?php echo get_post_meta( $post->ID, 'sticky_banner_text', true ); ?>
+					</div>
+				</div>
+			</div>
+		<?php endif; ?>
 
 		<!-- Header -->
 		<header class="pc-simple-header">
@@ -180,6 +192,28 @@ global $header_settings;
 		</header>
 		<!-- End Header -->
 
+		<!-- Floating Coupon Container -->
+		<?php if (isset($_GET['dev'])): ?>
+		
+			<div class="coupon-box-floating">
+
+				<div class="coupon-box-floating-icon"></div>
+
+				<div class="coupon-box-floating-content">
+					<h4 class="coupon-box-floating-content-title mb-3">Ein bunter Moment zum Verschenken!</h4>
+					<p>
+						Du möchtest einen Gutschein verschenken, der genauso individuell ist wie der Mensch, der ihn bekommt?
+						Bei uns kannst du Gutscheine in beliebiger Höhe direkt im Laden erwerben. So hast du volle Flexibilität , ganz ohne festen Betrag.
+					</p>
+					<p>
+						<b>So funktioniert’s:</b><br>
+						Einfach vorbeikommen, Wunschbetrag nennen und Gutschein mitnehmen. Persönlich, unkompliziert und mit Liebe gemacht.
+					</p>
+				</div>
+
+			</div>
+		
+		<?php endif; ?>
 
 		<!-- Start Container -->
 		<div class="container pc-container page-content">

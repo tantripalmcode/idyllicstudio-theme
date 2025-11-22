@@ -29,7 +29,7 @@ function ajax_pc_check_availability()
     $response['success'] = false;
     $response['selected_date'] = $selected_date;
 
-    // Close event date lists
+    // Close event date lists global
     $close_event_date_lists = get_field('pc_close_date_lists', 'option');
     $close_dates = [];
     if ($close_event_date_lists) {
@@ -38,10 +38,29 @@ function ajax_pc_check_availability()
         }
     }
 
+
     // Get event posts
     $event_id = pc_get_post_id_by_post_title('em_event', $course);
 
     if ($event_id) {
+
+        //close event date lists per event
+        $close_event_start_date = get_field('close_start_date', $event_id);
+        $close_event_end_date = get_field('close_end_date', $event_id);
+        if ($close_event_start_date && $close_event_end_date) {
+            // Convert DD/MM/YYYY format to DateTime objects
+            $start_date = DateTime::createFromFormat('d/m/Y', $close_event_start_date);
+            $end_date = DateTime::createFromFormat('d/m/Y', $close_event_end_date);
+            
+            if ($start_date && $end_date) {
+                // Generate all dates from start to end
+                $current_date = clone $start_date;
+                while ($current_date <= $end_date) {
+                    $close_dates[] = $current_date->format('Y-m-d');
+                    $current_date->add(new DateInterval('P1D')); // Add 1 day
+                }
+            }
+        }
 
         $day_data            = get_field('pc_' . $today, $event_id);
         $max_capacity        = get_field('pc_maximum_capacity', $event_id);
