@@ -205,8 +205,8 @@ function custom_validate_kapazitat( $result, $tag ) {
     $datum         = isset($_POST['datum_format']) ? sanitize_text_field($_POST['datum_format'])  : '';
     $time_selected = isset($_POST['zeit']) ? sanitize_text_field($_POST['zeit'])    : '';
 
-    if (empty($course) || empty($datum) || empty($time_selected)) {
-        $result->invalidate( $tag, 'Bitte wählen Sie einen Kurs, ein Datum und eine Zeit aus asdasd.' );
+    if (empty($course) || empty($datum)) {
+        $result->invalidate( $tag, 'Bitte wählen Sie einen Kurs und ein Datum aus.' );
         return $result;
     }
 
@@ -216,6 +216,13 @@ function custom_validate_kapazitat( $result, $tag ) {
 
     if (!$event_id) {
         $result->invalidate( $tag, 'Der ausgewählte Kurs ist ungültig.' );
+        return $result;
+    }
+
+    // get is monthly event
+    $is_monthly_event = get_field('pc_monthly_event', $event_id);
+    if (!$is_monthly_event && empty($time_selected)) {
+        $result->invalidate( $tag, 'Bitte wählen Sie eine Zeit aus.' );
         return $result;
     }
 

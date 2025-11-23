@@ -180,8 +180,58 @@
           formattedDate = date.format("YYYYMMDD");
         }
 
+        // Check for monthly event mode
+        if ($datum_field.hasClass('pc-is-monthly-event')) {
+          let selectedMonth = date.month(); // 0-based index
+          let selectedYear = date.year();
+
+          // Filter available_dates to current month
+          let monthDates = [];
+          if (typeof available_dates === "object" && Array.isArray(available_dates)) {
+            available_dates.forEach(function (dt) {
+              // dt format assumed "YYYY-MM-DD"
+              let m = moment(dt, "YYYY-MM-DD");
+              if (m.isValid() && m.month() === selectedMonth && m.year() === selectedYear) {
+                monthDates.push(m);
+              }
+            });
+          }
+          // Sort the list of dates in ascending order
+          monthDates.sort(function (a, b) {
+            return a.unix() - b.unix();
+          });
+
+          if (monthDates.length > 0) {
+            let first = monthDates[0];
+            let last = monthDates[monthDates.length - 1];
+
+            // Format range like "Februar 4, 2026" or "Februar 4, 2026 - Februar 7, 2026"
+            let displayRange;
+            if (first.isSame(last, "day")) {
+              displayRange = first.format("MMMM D, YYYY");
+            } else {
+              displayRange = first.format("MMMM D, YYYY") + " - " + last.format("MMMM D, YYYY");
+            }
+            $datum_field.val(displayRange);
+
+            // Set start & end date values for hidden fields in format 20260220T140000 (YYYYMMDDTHHMMSS)
+            $('[name="start_date_time"]').val(first.format("YYYYMMDD[T]110000"));
+            $('[name="end_date_time"]').val(last.format("YYYYMMDD[T]110000"));
+          } else {
+            // fallback - just select as normal, with Jahr
+            $datum_field.val(date.format("MMMM D, YYYY"));
+            $('[name="start_date_time"]').val(date.format("YYYYMMDD[T]110000"));
+            $('[name="end_date_time"]').val(date.format("YYYYMMDD[T]110000"));
+          }
+
+        } else {
+          // Not monthly event: show single selected date formatted
+          $datum_field.val(date.format("MMMM D, YYYY"));
+        }
+
         $("[name=zeit]").removeClass("pc-selected").val("");
         $("[name=datum_format]").val(formattedDate);
+
         updateNoteCalendar();
         ajax_check_availability();
       },
@@ -270,6 +320,9 @@
       const $zeit_field = $("[name=zeit]");
       const $kapazitat_field = $("[name=kapazitat]");
       const $datum_field = $(".pc-event-datum");
+
+      // reset the datum field
+      $datum_field.val("");
 
       // Disable and clear the 'zeit' and 'kapazitat' fields
       $zeit_field.prop("disabled", true).removeClass("pc-selected").val("");
@@ -429,9 +482,10 @@
       dayName = date.format("dddd");
       formattedDate = date.format("YYYYMMDD");
     }
-
-
+    
+    // show time parent
     $zeit_parent.show();
+    $datum_field.removeClass('pc-is-monthly-event');
 
     if (course !== "") {
       $.ajax({
@@ -474,7 +528,10 @@
             // check if is montly event
             if(response.is_monthly_event){
               $zeit_parent.hide();
+              $datum_field.addClass('pc-is-monthly-event');
             }
+
+            // show time options
             if (time === "") {
               $("[name=zeit]").html(response.time_options);
             }
@@ -523,14 +580,16 @@
    */
   function auto_selected_event() {
     if ($("body").hasClass("single-em_event")) {
-      const title = $("#event-heading").text();
+      // Get the current post slug from the URL
+      const path = window.location.pathname;
+      // Remove trailing slash, then get last path segment
+      const slug = path.replace(/\/$/, '').split('/').pop();
       setTimeout(() => {
-        // console.log(title);
         const $kurse_field = $("[name=kurse]");
         $kurse_field.addClass("pc-selected");
-        $kurse_field.val(title);
+        $kurse_field.val(slug);
         ajax_check_availability();
-      }, 300);
+      }, 1000);
     }
   }
 

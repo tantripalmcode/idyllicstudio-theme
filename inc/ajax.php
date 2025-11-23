@@ -10,15 +10,10 @@ function ajax_pc_check_availability()
 {
     $post          = isset($_POST) ? wp_unslash($_POST) : [];
     $course        = $post['course'];
-    $datum         = $post['datum'];
     $dayName       = $post['dayName'];
     $time_selected = $post['time'];
 
     if ($dayName) {
-        // $timestamp  = strtotime( $datum );
-        // $today      = sanitize_title( date('l', $timestamp) );
-        // $today      = get_german_weekdays( $today );
-        // $today_date = date( "Ymd", $timestamp );
         $today         = strtolower($dayName);
         $selected_date = $post['formattedDate'];
     } else {
@@ -66,15 +61,16 @@ function ajax_pc_check_availability()
             }
         }
 
-        error_log('today: ' . $today);
-
         $day_data            = get_field('pc_' . $today, $event_id);
         $max_capacity        = get_field('pc_maximum_capacity', $event_id);
-        $total_capacity_used = get_data_event_booking_capacity($event_id, $selected_date, $time_selected);
+        
+        // For monthly events, check capacity without time (only by date)
+        $time_for_capacity_check = $is_monthly_event ? '' : $time_selected;
+        $total_capacity_used = get_data_event_booking_capacity($event_id, $selected_date, $time_for_capacity_check);
         $max_capacity        = (int)$max_capacity - $total_capacity_used;
         $max_capacity        = $max_capacity <= 0 ? 0 : $max_capacity;
 
-        $total_booked_on_that_day = get_total_book_on_the_day($selected_date, $time_selected);
+        $total_booked_on_that_day = get_total_book_on_the_day($selected_date, $time_for_capacity_check);
         $available_capcaity_left_on_that_day = PC_MAX_CAPACITY_PER_TIME_SLOT - $total_booked_on_that_day;
 
         if($max_capacity > $available_capcaity_left_on_that_day){
@@ -93,7 +89,21 @@ function ajax_pc_check_availability()
 
         $response['interval'] = $day_data['interval'] ?? 0;
 
-        if ($day_data && $today) {
+        // For monthly events, skip time options and show capacity directly
+        if ($is_monthly_event) {
+            $response['success'] = true;
+            
+            // Set max capacity options for monthly event
+            $max_capacity_options = '<option value="">Kapazitat wählen</option>';
+            for ($capacity = 1; $capacity <= (int) $max_capacity; $capacity++) {
+                $max_capacity_options .= '<option value="' . $capacity . '">' . $capacity . '</option>';
+            }
+            
+            $response['max_capacity']         = '(' . $max_capacity . ' verfügbar' . ')';
+            $response['max_capacity_number']  = (int) $max_capacity;
+            $response['max_capacity_options'] = $max_capacity_options;
+            $response['time_field']           = "not_required"; // Indicate time is not required for monthly events
+        } elseif ($day_data && $today) {
             $now = new DateTime('now', new DateTimeZone('Europe/Berlin')); // Current date and time
 
             // Create a DateTime object from the string
@@ -167,36 +177,43 @@ function get_data_event_booking_capacity($event_id, $date, $time)
     $start_time   = $time ? $time[0] : '';
     $end_time     = $time ? $time[1] : '';
 
+    // Build meta query - for monthly events (empty time), don't filter by time
+    $meta_query = array(
+        'relation' => 'AND',
+        array(
+            'key' => 'pc_event',
+            'compare' => '=',
+            'value' => $event_id,
+        ),
+        array(
+            'key' => 'pc_date',
+            'value' => $date,
+            'compare' => '=',
+            'type' => 'DATE',
+        ),
+    );
+
+    // Only add time filters if time is provided (not for monthly events)
+    if ($start_time && $end_time) {
+        $meta_query[] = array(
+            'key' => 'pc_start_time',
+            'value' => $start_time,
+            'compare' => '=',
+        );
+        $meta_query[] = array(
+            'key' => 'pc_end_time',
+            'value' => $end_time,
+            'compare' => '=',
+        );
+    }
+
     // Get event booking posts
     $event_bookings = get_posts(
         array(
             'post_type' => 'event-booking',  // Change 'post' to your custom post type if needed
             'posts_per_page' => -1,  // Get all posts
             'post_status' => ['publish'],
-            'meta_query' => array(
-                'relation' => 'AND',
-                array(
-                    'key' => 'pc_event',
-                    'compare' => '=',
-                    'value' => $event_id,
-                ),
-                array(
-                    'key' => 'pc_date',
-                    'value' => $date,
-                    'compare' => '=',
-                    'type' => 'DATE',
-                ),
-                array(
-                    'key' => 'pc_start_time',
-                    'value' => $start_time,
-                    'compare' => '=',
-                ),
-                array(
-                    'key' => 'pc_end_time',
-                    'value' => $end_time,
-                    'compare' => '=',
-                ),
-            ),
+            'meta_query' => $meta_query,
         )
     );
 
@@ -226,31 +243,38 @@ function get_total_book_on_the_day($date, $time)
     $start_time   = $time ? $time[0] : '';
     $end_time     = $time ? $time[1] : '';
 
+    // Build meta query - for monthly events (empty time), don't filter by time
+    $meta_query = array(
+        'relation' => 'AND',
+        array(
+            'key' => 'pc_date',
+            'value' => $date,
+            'compare' => '=',
+            'type' => 'DATE',
+        ),
+    );
+
+    // Only add time filters if time is provided (not for monthly events)
+    if ($start_time && $end_time) {
+        $meta_query[] = array(
+            'key' => 'pc_start_time',
+            'value' => $start_time,
+            'compare' => '=',
+        );
+        $meta_query[] = array(
+            'key' => 'pc_end_time',
+            'value' => $end_time,
+            'compare' => '=',
+        );
+    }
+
     // Get event booking posts
     $event_bookings = get_posts(
         array(
             'post_type' => 'event-booking',  // Change 'post' to your custom post type if needed
             'posts_per_page' => -1,  // Get all posts
             'post_status' => ['publish'],
-            'meta_query' => array(
-                'relation' => 'AND',
-                array(
-                    'key' => 'pc_date',
-                    'value' => $date,
-                    'compare' => '=',
-                    'type' => 'DATE',
-                ),
-                array(
-                    'key' => 'pc_start_time',
-                    'value' => $start_time,
-                    'compare' => '=',
-                ),
-                array(
-                    'key' => 'pc_end_time',
-                    'value' => $end_time,
-                    'compare' => '=',
-                ),
-            ),
+            'meta_query' => $meta_query,
         )
     );
 
