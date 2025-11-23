@@ -34,21 +34,26 @@ function modify_cf7_field( $tag, $unused ) {
     
         $posts = new \WP_Query( $args );
 
-        $options = array();
+        $values = array();
+        $labels = array();
         
         if( $posts->have_posts() ){
             while( $posts->have_posts() ){
                 $posts->the_post();
 
+                $post_slug = get_post_field( 'post_name', get_the_ID() );
                 $post_title = get_the_title();
 
-                $options[] = $post_title;
+                // Slug as value, title as label
+                $values[] = $post_slug;
+                $labels[] = $post_title;
 
             } wp_reset_postdata();
         }
 
-        $tag['raw_values'] = $options;
-        $tag['values'] = $options;
+        $tag['raw_values'] = $values;
+        $tag['values'] = $values;
+        $tag['labels'] = $labels;
     }
 
     // Zeit
@@ -125,7 +130,8 @@ function save_booking_form_submission( $contact_form ) {
             $booking_id = wp_insert_post( $post_data );
             
             if ( $booking_id ) {
-                $event_id  = pc_get_post_id_by_post_title( 'em_event', $kurse );
+                $event = get_page_by_path($kurse, OBJECT, 'em_event');
+                $event_id = $event ? $event->ID : false;
                 $datum = date( "Ymd", strtotime( $datum ) );
 
                 update_post_meta( $booking_id, 'pc_vorname', $vorname );
@@ -169,7 +175,8 @@ function save_booking_form_submission( $contact_form ) {
             $booking_id = wp_insert_post( $post_data );
 
             if ( $booking_id ) {
-                $event_id  = pc_get_post_id_by_post_title( 'em_event', $kurse );
+                $event = get_page_by_path($kurse, OBJECT, 'em_event');
+                $event_id = $event ? $event->ID : false;
                 $datum = date( "Ymd", strtotime( $datum ) );
 
                 update_post_meta( $booking_id, 'pc_vorname', $vorname );
@@ -204,14 +211,9 @@ function custom_validate_kapazitat( $result, $tag ) {
     }
 
     // Get the event ID based on the course title
-    $event_id = pc_get_post_id_by_post_title('em_event', $course);
+    $event = get_page_by_path($course, OBJECT, 'em_event');
+    $event_id = $event ? $event->ID : false;
 
-    if (!$event_id) {
-        $result->invalidate( $tag, 'Der ausgewählte Kurs ist ungültig.' );
-        return $result;
-    }
-
-    $event_id = pc_get_post_id_by_post_title('em_event', $course);
     if (!$event_id) {
         $result->invalidate( $tag, 'Der ausgewählte Kurs ist ungültig.' );
         return $result;

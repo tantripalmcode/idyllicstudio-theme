@@ -40,9 +40,13 @@ function ajax_pc_check_availability()
 
 
     // Get event posts
-    $event_id = pc_get_post_id_by_post_title('em_event', $course);
+    // $course here contains the slug, so get the event by slug
+    $event = get_page_by_path($course, OBJECT, 'em_event');
+    $event_id = $event ? $event->ID : false;
 
     if ($event_id) {
+
+        $is_monthly_event = get_field('pc_monthly_event', $event_id);
 
         //close event date lists per event
         $close_event_start_date = get_field('close_start_date', $event_id);
@@ -61,6 +65,8 @@ function ajax_pc_check_availability()
                 }
             }
         }
+
+        error_log('today: ' . $today);
 
         $day_data            = get_field('pc_' . $today, $event_id);
         $max_capacity        = get_field('pc_maximum_capacity', $event_id);
@@ -141,8 +147,9 @@ function ajax_pc_check_availability()
             $response['date_field'] = "empty";
         }
 
-        $response['dates']          = $dates ? $dates : 'everyday';
-        $response['close_dates']    = $close_dates;
+        $response['is_monthly_event'] = $is_monthly_event;
+        $response['dates']            = $dates ? $dates: 'everyday';
+        $response['close_dates']      = $close_dates;
     }
 
     wp_send_json($response);

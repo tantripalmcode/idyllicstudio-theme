@@ -415,6 +415,7 @@
     const $zeit_field = $("[name=zeit]");
     const $kapazitat_field = $("[name=kapazitat]");
     const $datum_field = $(".pc-event-datum");
+    const $zeit_parent = $('.pc-zeit').parent();
 
     const $booking_form = $(".pc-booking-form");
     const course = $("[name=kurse]").val();
@@ -428,6 +429,9 @@
       dayName = date.format("dddd");
       formattedDate = date.format("YYYYMMDD");
     }
+
+
+    $zeit_parent.show();
 
     if (course !== "") {
       $.ajax({
@@ -464,8 +468,13 @@
           }
         },
         success: function (response) {
-          // console.log(response);
+          console.log(response);
           if (response.success) {
+
+            // check if is montly event
+            if(response.is_monthly_event){
+              $zeit_parent.hide();
+            }
             if (time === "") {
               $("[name=zeit]").html(response.time_options);
             }
