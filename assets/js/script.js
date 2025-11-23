@@ -217,20 +217,24 @@
             // Set start & end date values for hidden fields in format 20260220T140000 (YYYYMMDDTHHMMSS)
             $('[name="start_date_time"]').val(first.format("YYYYMMDD[T]110000"));
             $('[name="end_date_time"]').val(last.format("YYYYMMDD[T]110000"));
+
+            // Set datum_format to the formatted start date for the month/event range
+            $("[name=datum_format]").val(first ? first.format("YYYYMMDD") : formattedDate);
           } else {
             // fallback - just select as normal, with Jahr
             $datum_field.val(date.format("MMMM D, YYYY"));
             $('[name="start_date_time"]').val(date.format("YYYYMMDD[T]110000"));
             $('[name="end_date_time"]').val(date.format("YYYYMMDD[T]110000"));
+            $("[name=datum_format]").val(formattedDate);
           }
 
         } else {
           // Not monthly event: show single selected date formatted
           $datum_field.val(date.format("MMMM D, YYYY"));
+          $("[name=datum_format]").val(formattedDate);
         }
 
         $("[name=zeit]").removeClass("pc-selected").val("");
-        $("[name=datum_format]").val(formattedDate);
 
         updateNoteCalendar();
         ajax_check_availability();
