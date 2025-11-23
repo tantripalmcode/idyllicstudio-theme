@@ -150,8 +150,41 @@
     close_dates = null
   ) {
     const $datum_field = $(".pc-event-datum");
-    // Destroy existing datepicker instance
-    $datum_field.datepicker("destroy");
+    
+    // Check if element exists
+    if ($datum_field.length === 0) {
+      return;
+    }
+    
+    // Safely destroy existing datepicker instance
+    try {
+      // Check if datepicker widget exists before destroying
+      if ($datum_field.hasClass("hasDatepicker")) {
+        const datepickerInstance = $datum_field.data("datepicker");
+        if (datepickerInstance) {
+          // Hide any open datepicker popup first
+          try {
+            $datum_field.datepicker("hide");
+          } catch (hideError) {
+            // Ignore hide errors
+          }
+          $datum_field.datepicker("destroy");
+        } else {
+          // Clean up if data exists but instance is corrupted
+          $datum_field.removeClass("hasDatepicker");
+          $datum_field.removeData("datepicker");
+        }
+      }
+      // Also clean up any orphaned datepicker divs
+      $("#ui-datepicker-div").remove();
+    } catch (e) {
+      // If destroy fails, clean up manually
+      console.warn("Datepicker destroy error:", e);
+      $datum_field.removeClass("hasDatepicker");
+      $datum_field.removeData("datepicker");
+      // Also remove any datepicker div that might be orphaned
+      $("#ui-datepicker-div").remove();
+    }
 
     // Datepicker
     $datum_field.datepicker({
@@ -526,7 +559,6 @@
           }
         },
         success: function (response) {
-          console.log(response);
           if (response.success) {
 
             // check if is montly event
@@ -699,7 +731,6 @@
   function event_popup_drawing_toy() {
     jQuery(document).ready(function () {
       if (jQuery(".pc-popup-button").length > 0) {
-        console.log("test");
         const $button = jQuery(".pc-popup-button");
 
         $button.on("click", function (e) {

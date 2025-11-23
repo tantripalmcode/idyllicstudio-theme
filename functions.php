@@ -7,7 +7,7 @@
  * @package Palm_Code_Child
  */
 
-define("PC_CHILD_VERSION", "1.1.3");
+define("PC_CHILD_VERSION", "1.1.4");
 define('PC_CHILD_PATH', get_stylesheet_directory());
 define('PC_CHILD_URL', get_stylesheet_directory_uri());
 define('PC_CHILD_INC_PATH', PC_CHILD_PATH . '/inc');
