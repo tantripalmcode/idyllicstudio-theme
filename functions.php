@@ -29,6 +29,11 @@ define('PC_MAX_CAPACITY_PER_TIME_SLOT', 20);
 // Custom Define
 define('PALMCODE_HEADER_CTA_LENGTH', 3);
 
+// Carbon Fields
+require_once get_stylesheet_directory() . '/vendor/autoload.php';
+add_action('after_setup_theme', function () {
+    \Carbon_Fields\Carbon_Fields::boot();
+});
 
 /**
  * Custom functions for this theme.
@@ -70,9 +75,17 @@ require_once PC_CHILD_VENDOR_PATH . '/event_prime/event_prime.php';
  */
 require_once PC_CHILD_VENDOR_PATH . '/contact_form_7/contact_form_7.php';
 
+/**
+ * Load Admin Column
+ */
 if( is_admin() ){
     require_once PC_CHILD_INC_PATH . '/admin-column.php';
 }
+
+/**
+ * Load Event Availability Fields
+ */
+require_once PC_CHILD_VENDOR_PATH . '/carbon_fields/event-availability-fields.php';
 
 
 /**
