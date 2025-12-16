@@ -79,6 +79,235 @@ function pc_enqueue_product_booking_scripts() {
 }
 
 /**
+ * Get custom display price for a product
+ */
+function pc_get_display_price($product_id) {
+    $display_price = carbon_get_post_meta($product_id, 'pc_display_price');
+    if (!empty($display_price) && is_numeric($display_price)) {
+        return floatval($display_price);
+    }
+    return false;
+}
+
+/**
+ * Get static payment note message
+ */
+function pc_get_payment_note() {
+    return __('This is a deposit payment. The remaining balance will be paid on-site.', 'palmcode-child');
+}
+
+/**
+ * Override product price display on single product page, cart, and checkout
+ * Uses custom display price field for display, but regular WooCommerce price is still used for actual payment calculations
+ */
+add_filter('woocommerce_get_price_html', 'pc_override_product_price_display', 10, 2);
+function pc_override_product_price_display($price_html, $product) {
+    // Skip on shop, category, and tag pages
+    if (is_shop() || is_product_category() || is_product_tag() || is_product_taxonomy()) {
+        return $price_html;
+    }
+    
+    // Get custom display price
+    $display_price = pc_get_display_price($product->get_id());
+    
+    // If display price is set, use it instead of regular price
+    if ($display_price !== false) {
+        // Format the price using WooCommerce price formatting
+        $formatted_price = wc_price($display_price);
+        
+        // Add price suffix if product has one
+        $price_suffix = $product->get_price_suffix();
+        if ($price_suffix) {
+            $formatted_price .= $price_suffix;
+        }
+        
+        return $formatted_price;
+    }
+    
+    // If no custom display price, return original price
+    return $price_html;
+}
+
+/**
+ * Add payment note after price on single product page
+ */
+add_action('woocommerce_single_product_summary', 'pc_display_payment_note_on_product', 25);
+function pc_display_payment_note_on_product() {
+    global $product;
+    
+    if (!$product) {
+        return;
+    }
+    
+    $display_price = pc_get_display_price($product->get_id());
+    $regular_price = $product->get_regular_price();
+    
+    // Only show if display price is different from regular price
+    if ($display_price !== false && $display_price != $regular_price) {
+        $payment_note = pc_get_payment_note();
+        $deposit_amount = wc_price($regular_price);
+        $full_price = wc_price($display_price);
+        
+        echo '<div class="pc-payment-info" style="margin-top: 15px; padding: 15px; background-color: #f8f9fa; border-left: 4px solid #0073aa; border-radius: 4px;">';
+        echo '<p style="margin: 0 0 8px 0; font-weight: 600; color: #333;">' . __('Payment Information', 'palmcode-child') . '</p>';
+        echo '<p style="margin: 0 0 8px 0; color: #555;">';
+        echo sprintf(
+            __('Full course price: %s | Deposit required at booking: %s', 'palmcode-child'),
+            '<strong>' . $full_price . '</strong>',
+            '<strong style="color: #d63638;">' . $deposit_amount . '</strong>'
+        );
+        echo '</p>';
+        echo '<p style="margin: 0; font-size: 0.9em; color: #666; font-style: italic;">' . esc_html($payment_note) . '</p>';
+        echo '</div>';
+    }
+}
+
+/**
+ * Override cart item price display (unit price)
+ * Shows custom display price but actual payment uses regular WooCommerce price
+ */
+add_filter('woocommerce_cart_item_price', 'pc_override_cart_item_price_display', 10, 3);
+function pc_override_cart_item_price_display($price_html, $cart_item, $cart_item_key) {
+    $product_id = isset($cart_item['product_id']) ? $cart_item['product_id'] : 0;
+    
+    if (!$product_id) {
+        return $price_html;
+    }
+    
+    // Get custom display price
+    $display_price = pc_get_display_price($product_id);
+    
+    // If display price is set, show it with deposit info
+    if ($display_price !== false) {
+        $product = wc_get_product($product_id);
+        if ($product) {
+            $regular_price = $product->get_regular_price();
+            $formatted_price = wc_price($display_price);
+            
+            // Only show deposit note if prices differ
+            if ($display_price != $regular_price) {
+                $formatted_price .= '<br><small style="color: #d63638; font-weight: 600;">' . 
+                    sprintf(__('Deposit: %s', 'palmcode-child'), wc_price($regular_price)) . 
+                    '</small>';
+            }
+            
+            return $formatted_price;
+        }
+        
+        return wc_price($display_price);
+    }
+    
+    return $price_html;
+}
+
+/**
+ * Override cart item subtotal display
+ * Shows custom display price multiplied by quantity, but actual payment uses regular WooCommerce price
+ */
+add_filter('woocommerce_cart_item_subtotal', 'pc_override_cart_item_subtotal_display', 10, 3);
+function pc_override_cart_item_subtotal_display($subtotal_html, $cart_item, $cart_item_key) {
+    $product_id = isset($cart_item['product_id']) ? $cart_item['product_id'] : 0;
+    $quantity = isset($cart_item['quantity']) ? $cart_item['quantity'] : 1;
+    
+    if (!$product_id) {
+        return $subtotal_html;
+    }
+    
+    // Get custom display price
+    $display_price = pc_get_display_price($product_id);
+    
+    // If display price is set, calculate subtotal using display price
+    if ($display_price !== false) {
+        $display_subtotal = $display_price * $quantity;
+        $formatted_price = wc_price($display_subtotal);
+        
+        // Get actual payment amount (regular price)
+        $product = wc_get_product($product_id);
+        if ($product) {
+            $regular_price = $product->get_regular_price();
+            $actual_payment = floatval($regular_price) * $quantity;
+            
+            // Only show note if prices differ
+            if ($display_subtotal != $actual_payment) {
+                $formatted_price .= '<br><small style="color: #d63638; font-weight: 600;">' . 
+                    sprintf(__('Deposit: %s', 'palmcode-child'), wc_price($actual_payment)) . 
+                    '</small>';
+            }
+        }
+        
+        return $formatted_price;
+    }
+    
+    return $subtotal_html;
+}
+
+/**
+ * Add deposit information notice in cart
+ */
+add_action('woocommerce_before_cart_table', 'pc_display_cart_deposit_notice', 10);
+function pc_display_cart_deposit_notice() {
+    $has_deposit_products = false;
+    
+    foreach (WC()->cart->get_cart() as $cart_item) {
+        $product_id = isset($cart_item['product_id']) ? $cart_item['product_id'] : 0;
+        if ($product_id) {
+            $display_price = pc_get_display_price($product_id);
+            $product = wc_get_product($product_id);
+            
+            if ($display_price !== false && $product) {
+                $regular_price = $product->get_regular_price();
+                if ($display_price != $regular_price) {
+                    $has_deposit_products = true;
+                    break;
+                }
+            }
+        }
+    }
+    
+    if ($has_deposit_products) {
+        echo '<div class="woocommerce-info pc-deposit-notice" style="margin-bottom: 20px; padding: 15px; background-color: #e7f3ff; border-left: 4px solid #0073aa; border-radius: 4px;">';
+        echo '<p style="margin: 0 0 10px 0; font-weight: 600; color: #333;">' . __('Payment Information', 'palmcode-child') . '</p>';
+        echo '<p style="margin: 0; color: #555;">';
+        echo __('The prices shown below are the full course prices. You will pay a deposit amount at checkout (shown in red). The remaining balance will be paid on-site.', 'palmcode-child');
+        echo '</p>';
+        echo '</div>';
+    }
+}
+
+/**
+ * Add deposit information notice in checkout
+ */
+add_action('woocommerce_checkout_before_order_review_heading', 'pc_display_checkout_deposit_notice', 10);
+function pc_display_checkout_deposit_notice() {
+    $has_deposit_products = false;
+    
+    foreach (WC()->cart->get_cart() as $cart_item) {
+        $product_id = isset($cart_item['product_id']) ? $cart_item['product_id'] : 0;
+        if ($product_id) {
+            $display_price = pc_get_display_price($product_id);
+            $product = wc_get_product($product_id);
+            
+            if ($display_price !== false && $product) {
+                $regular_price = $product->get_regular_price();
+                if ($display_price != $regular_price) {
+                    $has_deposit_products = true;
+                    break;
+                }
+            }
+        }
+    }
+    
+    if ($has_deposit_products) {
+        echo '<div class="woocommerce-info pc-deposit-notice" style="margin-bottom: 20px; padding: 15px; background-color: #e7f3ff; border-left: 4px solid #0073aa; border-radius: 4px;">';
+        echo '<p style="margin: 0 0 10px 0; font-weight: 600; color: #333;">' . __('Payment Information', 'palmcode-child') . '</p>';
+        echo '<p style="margin: 0; color: #555;">';
+        echo __('You are paying a deposit amount. The remaining balance will be paid on-site.', 'palmcode-child');
+        echo '</p>';
+        echo '</div>';
+    }
+}
+
+/**
  * AJAX handler to check product availability
  */
 add_action('wp_ajax_pc_check_product_availability', 'pc_ajax_check_product_availability');

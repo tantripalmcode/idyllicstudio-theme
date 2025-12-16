@@ -13,6 +13,13 @@ if (!function_exists('pc_register_event_availability_fields')) {
         Container::make('post_meta', __('Event Availability', 'palmcode-child'))
             ->where('post_type', '=', 'product')
             ->add_fields(array(
+                // Display Price - shown on single product page
+                Field::make('text', 'pc_display_price', __('Display Price (Full Course Price)', 'palmcode-child'))
+                    ->set_attribute('type', 'number')
+                    ->set_attribute('step', '0.01')
+                    ->set_attribute('min', '0')
+                    ->set_help_text('Full course price to display to customers. The regular WooCommerce price below will be used as the minimum deposit/payment amount at booking.'),
+
                 // Global Capacity - applies to all time slots
                 Field::make('text', 'pc_event_capacity', __('Event Capacity', 'palmcode-child'))
                     ->set_attribute('type', 'number')
