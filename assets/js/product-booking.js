@@ -63,7 +63,7 @@
             // Initialize datepicker
             $bookingDateField.datepicker({
                 minDate: 0,
-                dateFormat: 'MM dd, yyyy',
+                dateFormat: 'MM dd, yy', // Use 'yy' instead of 'yyyy' to avoid double year issue
                 beforeShowDay: function (date) {
                     const dateString = $.datepicker.formatDate('yy-mm-dd', date);
                     const day = date.getDay();
@@ -87,15 +87,22 @@
                     }
                 },
                 onSelect: function (dateText, inst) {
-                    const date = moment(dateText, 'MMMM DD, YYYY', 'de');
+                    // Parse the datepicker format (MM dd, yy) and format with moment for display
+                    // dateText will be like "December 23, 25" from datepicker
+                    // We need to convert it to full format
+                    const datepickerDate = $.datepicker.parseDate('MM dd, yy', dateText);
+                    const date = moment(datepickerDate);
                     let formattedDate = '';
+                    let displayDate = '';
                     
                     if (date.isValid()) {
                         formattedDate = date.format('YYYYMMDD');
+                        // Format display date in German locale
+                        displayDate = date.locale('de').format('MMMM D, YYYY');
                     }
 
-                    // Set both visible and hidden fields
-                    $bookingDateField.val(dateText);
+                    // Set visible field with properly formatted date
+                    $bookingDateField.val(displayDate);
                     $('#pc-booking-date-format').val(formattedDate);
                     
                     // Ensure the name attribute is set for form submission
@@ -108,7 +115,7 @@
                     $availabilityInfo.html('');
 
                     // Check availability
-                    checkAvailability(formattedDate, dateText, '');
+                    checkAvailability(formattedDate, displayDate, '');
                 }
             });
         }
@@ -162,9 +169,11 @@
                             $bookingTimeField.prop('disabled', false);
                         }
 
-                        // Show availability info
-                        if (data.available_capacity_text) {
+                        // Show availability info only when both date and time are selected
+                        if (data.available_capacity_text && timeSelected) {
                             $availabilityInfo.html('<span class="pc-availability-text">' + data.available_capacity_text + '</span>');
+                        } else {
+                            $availabilityInfo.html('');
                         }
 
                         // Enable add to cart if date and time are filled (quantity is handled by WooCommerce)

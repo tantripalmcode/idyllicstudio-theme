@@ -87,13 +87,23 @@ if( is_admin() ){
  */
 require_once PC_CHILD_VENDOR_PATH . '/carbon_fields/event-availability-fields.php';
 
+/**
+ * Load WooCommerce Product Booking
+ */
+require_once PC_CHILD_VENDOR_PATH . '/woocommerce/product-booking.php';
+
 
 /**
  * Modify Event Day Language
  */
 if ( !function_exists( 'modify_event_day_language' ) ) {
     function modify_event_day_language() {
-        // Start output buffering
+        // Only run on frontend, not in admin area or during AJAX
+        if ( is_admin() || wp_doing_ajax() || wp_doing_cron() ) {
+            return;
+        }
+        
+        // Start output buffering only on frontend
         ob_start(function($buffer) {
             // Replace English weekday names with German weekday names
             $german_weekdays = array(
@@ -111,7 +121,61 @@ if ( !function_exists( 'modify_event_day_language' ) ) {
         });
     }
     
-    add_filter('wp_loaded', 'modify_event_day_language');
+    // Use template_redirect hook which only fires on frontend
+    add_action('template_redirect', 'modify_event_day_language', 1);
+}
+
+/**
+ * Fix save button being disabled in admin
+ * This ensures the save/publish button works properly by preventing output buffering issues
+ */
+if ( !function_exists( 'pc_fix_admin_save_button' ) ) {
+    function pc_fix_admin_save_button() {
+        // Only run in admin area on post edit screens
+        if ( !is_admin() ) {
+            return;
+        }
+        
+        // Get current screen
+        $screen = get_current_screen();
+        if ( !$screen || $screen->base !== 'post' ) {
+            return;
+        }
+        
+        // Add JavaScript to ensure save button works
+        ?>
+        <script type="text/javascript">
+        jQuery(document).ready(function($) {
+            // Ensure save button is enabled after page load
+            setTimeout(function() {
+                var $saveButton = $('#publish, #save-post');
+                if ($saveButton.length && $saveButton.prop('disabled')) {
+                    $saveButton.prop('disabled', false);
+                }
+            }, 100);
+            
+            // Re-enable button if something tries to disable it
+            var observer = new MutationObserver(function(mutations) {
+                var $saveButton = $('#publish, #save-post');
+                if ($saveButton.length && $saveButton.prop('disabled')) {
+                    $saveButton.prop('disabled', false);
+                }
+            });
+            
+            var targetNode = document.getElementById('submitdiv') || document.body;
+            if (targetNode) {
+                observer.observe(targetNode, {
+                    attributes: true,
+                    attributeFilter: ['disabled'],
+                    childList: false,
+                    subtree: true
+                });
+            }
+        });
+        </script>
+        <?php
+    }
+    add_action('admin_footer', 'pc_fix_admin_save_button');
 }
 
 
