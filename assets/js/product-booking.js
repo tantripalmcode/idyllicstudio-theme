@@ -97,11 +97,11 @@
                     
                     if (date.isValid()) {
                         formattedDate = date.format('YYYYMMDD');
-                        // Format display date in German locale
-                        displayDate = date.locale('de').format('MMMM D, YYYY');
+                        // Format display date as dd.mm.YYYY
+                        displayDate = date.format('DD.MM.YYYY');
                     }
 
-                    // Set visible field with properly formatted date
+                    // Set visible field with properly formatted date (dd.mm.YYYY)
                     $bookingDateField.val(displayDate);
                     $('#pc-booking-date-format').val(formattedDate);
                     
@@ -131,7 +131,17 @@
                     action: 'pc_check_product_availability',
                     nonce: pcProductBooking.nonce,
                     product_id: $productId,
-                    selected_date: dateText ? moment(dateText, 'MMMM DD, YYYY', 'de').format('YYYY-MM-DD') : '',
+                    selected_date: dateText ? (() => {
+                        // Try parsing with dd.mm.YYYY format first, then fallback to other formats
+                        let date = moment(dateText, 'DD.MM.YYYY', true);
+                        if (!date.isValid()) {
+                            date = moment(dateText, 'MMMM D, YY', 'de');
+                        }
+                        if (!date.isValid()) {
+                            date = moment(dateText, 'MMMM DD, YYYY', 'de');
+                        }
+                        return date.isValid() ? date.format('YYYY-MM-DD') : '';
+                    })() : '',
                     formatted_date: formattedDate,
                     time: timeSelected
                 },
@@ -244,7 +254,14 @@
                 // Try to get date format from the visible date field
                 const dateText = $('#pc-booking-date').val();
                 if (dateText) {
-                    const date = moment(dateText, 'MMMM DD, YYYY', 'de');
+                    // Try parsing with dd.mm.YYYY format first, then fallback to other formats
+                    let date = moment(dateText, 'DD.MM.YYYY', true);
+                    if (!date.isValid()) {
+                        date = moment(dateText, 'MMMM D, YY', 'de');
+                    }
+                    if (!date.isValid()) {
+                        date = moment(dateText, 'MMMM DD, YYYY', 'de');
+                    }
                     if (date.isValid()) {
                         $('#pc-booking-date-format').val(date.format('YYYYMMDD'));
                     }
