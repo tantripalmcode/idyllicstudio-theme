@@ -5,25 +5,44 @@ use Carbon_Fields\Container;
 use Carbon_Fields\Field;
 
 /**
- * Register Event Availability Fields for WooCommerce Products
+ * Register Course Availability Fields for WooCommerce Products
  */
-if (!function_exists('pc_register_event_availability_fields')) {
-    function pc_register_event_availability_fields()
+if (!function_exists('pc_register_course_availability_fields')) {
+    function pc_register_course_availability_fields()
     {
-        Container::make('post_meta', __('Event Availability', 'palmcode-child'))
+        Container::make('post_meta', __('Course Availability', 'palmcode-child'))
             ->where('post_type', '=', 'product')
             ->add_fields(array(
+                // Enable Course Availability Toggle
+                Field::make('checkbox', 'pc_enable_course_availability', __('Enable Course Availability', 'palmcode-child'))
+                    ->set_default_value(false)
+                    ->set_help_text('Check this box to enable course availability settings for this product. When enabled, you can configure availability schedules and time slots.'),
+
                 // Display Price - shown on single product page
                 Field::make('text', 'pc_display_price', __('Display Price (Full Course Price)', 'palmcode-child'))
                     ->set_attribute('type', 'number')
                     ->set_attribute('step', '0.01')
                     ->set_attribute('min', '0')
+                    ->set_conditional_logic(array(
+                        array(
+                            'field' => 'pc_enable_course_availability',
+                            'value' => true,
+                            'compare' => '=',
+                        ),
+                    ))
                     ->set_help_text('Full course price to display to customers. The regular WooCommerce price below will be used as the minimum deposit/payment amount at booking.'),
 
                 // Global Capacity - applies to all time slots
                 Field::make('text', 'pc_event_capacity', __('Event Capacity', 'palmcode-child'))
                     ->set_attribute('type', 'number')
                     ->set_attribute('min', 1)
+                    ->set_conditional_logic(array(
+                        array(
+                            'field' => 'pc_enable_course_availability',
+                            'value' => true,
+                            'compare' => '=',
+                        ),
+                    ))
                     ->set_help_text('Maximum number of bookings allowed per time slot. This applies globally to all time slots. Leave empty for unlimited capacity.'),
 
                 // Availability Mode - Radio Field
@@ -33,11 +52,23 @@ if (!function_exists('pc_register_event_availability_fields')) {
                         'specific_dates' => __('Specific Dates Only', 'palmcode-child'),
                     ))
                     ->set_default_value('weekly')
+                    ->set_conditional_logic(array(
+                        array(
+                            'field' => 'pc_enable_course_availability',
+                            'value' => true,
+                            'compare' => '=',
+                        ),
+                    ))
                     ->set_help_text('Choose how availability is managed for this event. Weekly allows recurring time slots for Tuesday through Sunday, while Specific Dates allows you to set individual dates with their own time slots.'),
 
                 // Weekly Schedule Section (Tuesday - Sunday)
                 Field::make('complex', 'pc_weekly_schedule', __('Weekly Schedule', 'palmcode-child'))
                     ->set_conditional_logic(array(
+                        array(
+                            'field' => 'pc_enable_course_availability',
+                            'value' => true,
+                            'compare' => '=',
+                        ),
                         array(
                             'field' => 'pc_availability_mode',
                             'value' => 'weekly',
@@ -89,6 +120,11 @@ if (!function_exists('pc_register_event_availability_fields')) {
                 Field::make('complex', 'pc_weekly_closed_dates', __('Closed Dates', 'palmcode-child'))
                     ->set_conditional_logic(array(
                         array(
+                            'field' => 'pc_enable_course_availability',
+                            'value' => true,
+                            'compare' => '=',
+                        ),
+                        array(
                             'field' => 'pc_availability_mode',
                             'value' => 'weekly',
                             'compare' => '=',
@@ -111,6 +147,11 @@ if (!function_exists('pc_register_event_availability_fields')) {
                 // Specific Dates Availability Section
                 Field::make('complex', 'pc_specific_date_slots', __('Specific Date Slots', 'palmcode-child'))
                     ->set_conditional_logic(array(
+                        array(
+                            'field' => 'pc_enable_course_availability',
+                            'value' => true,
+                            'compare' => '=',
+                        ),
                         array(
                             'field' => 'pc_availability_mode',
                             'value' => 'specific_dates',
@@ -147,5 +188,5 @@ if (!function_exists('pc_register_event_availability_fields')) {
             ));
     }
 
-    add_action('carbon_fields_register_fields', 'pc_register_event_availability_fields');
+    add_action('carbon_fields_register_fields', 'pc_register_course_availability_fields');
 }

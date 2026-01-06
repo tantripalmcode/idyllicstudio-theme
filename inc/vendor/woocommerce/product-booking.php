@@ -14,9 +14,9 @@ function pc_add_product_booking_fields() {
     global $product;
     
     // Only show for products that have event availability configured
-    $availability_mode = carbon_get_post_meta($product->get_id(), 'pc_availability_mode');
+    $enable_course_availability = carbon_get_post_meta($product->get_id(), 'pc_enable_course_availability');
     
-    if (!$availability_mode) {
+    if (!$enable_course_availability) {
         return;
     }
     
@@ -695,9 +695,9 @@ function pc_get_product_booking_capacity($product_id, $date, $time = '', $exclud
 add_filter('woocommerce_add_to_cart_validation', 'pc_validate_product_booking_fields', 10, 3);
 function pc_validate_product_booking_fields($passed, $product_id, $quantity) {
     // Check if product has availability configured
-    $availability_mode = carbon_get_post_meta($product_id, 'pc_availability_mode');
+    $enable_course_availability = carbon_get_post_meta($product_id, 'pc_enable_course_availability');
     
-    if (!$availability_mode) {
+    if (!$enable_course_availability) {
         return $passed;
     }
     
@@ -1253,6 +1253,10 @@ function pc_create_google_calendar_event($order_id) {
     $service = new Google_Service_Calendar($client);
     $calendar_id = get_option('pc_gcal_calendar_id', 'primary');
     
+    $events_created = 0;
+    $events_failed = 0;
+    $event_ids = array();
+    
     // Process each order item
     foreach ($order->get_items() as $item_id => $item) {
         $product_id = $item->get_product_id();
@@ -1378,15 +1382,31 @@ function pc_create_google_calendar_event($order_id) {
             $order->update_meta_data('_pc_gcal_event_id_' . $item_id, $created_event->getId());
             $order->save();
             
-            error_log('Google Calendar: Event created successfully - ' . $created_event->getId());
-            return $created_event->getId();
+            $event_ids[] = $created_event->getId();
+            $events_created++;
+            
+            error_log('Google Calendar: Event created successfully for item ' . $item_id . ' - ' . $created_event->getId());
         } catch (Exception $e) {
-            error_log('Google Calendar: Failed to create event - ' . $e->getMessage());
-            return false;
+            $events_failed++;
+            error_log('Google Calendar: Failed to create event for item ' . $item_id . ' - ' . $e->getMessage());
         }
     }
     
-    return true;
+    // Save order once after processing all items
+    if ($events_created > 0) {
+        $order->save();
+    }
+    
+    // Log summary
+    if ($events_created > 0) {
+        error_log('Google Calendar: Created ' . $events_created . ' event(s) for order #' . $order->get_order_number());
+    }
+    if ($events_failed > 0) {
+        error_log('Google Calendar: Failed to create ' . $events_failed . ' event(s) for order #' . $order->get_order_number());
+    }
+    
+    // Return true if at least one event was created, false if all failed
+    return $events_created > 0 ? $event_ids : false;
 }
 
 /**
@@ -1408,4 +1428,5 @@ function pc_create_calendar_event_on_order($order_id, $posted_data, $order) {
         pc_create_google_calendar_event($order_id);
     }
 }
+
 
