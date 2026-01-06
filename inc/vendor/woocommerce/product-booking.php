@@ -1072,3 +1072,340 @@ function pc_hide_technical_booking_meta($formatted_meta, $item) {
     return $formatted_meta;
 }
 
+/**
+ * Google Calendar Integration
+ * Automatically creates calendar events when orders are placed
+ */
+
+// Handle OAuth callback and token storage
+add_action('admin_init', 'pc_handle_google_calendar_oauth');
+function pc_handle_google_calendar_oauth() {
+    if (!current_user_can('manage_options')) {
+        return;
+    }
+    
+    // Handle authorization
+    if (isset($_GET['pc_gcal_authorize']) && $_GET['pc_gcal_authorize'] == '1') {
+        pc_init_google_calendar_oauth();
+    }
+    
+    // Handle OAuth callback
+    if (isset($_GET['code']) && isset($_GET['state']) && $_GET['state'] === 'pc_gcal_oauth') {
+        pc_complete_google_calendar_oauth($_GET['code']);
+    }
+    
+    // Handle revoke
+    if (isset($_GET['pc_gcal_revoke']) && $_GET['pc_gcal_revoke'] == '1') {
+        delete_option('pc_gcal_access_token');
+        delete_option('pc_gcal_refresh_token');
+        delete_option('pc_gcal_token_expires');
+        wp_redirect(add_query_arg('revoked', '1', pc_get_gcal_settings_page_url()));
+        exit;
+    }
+}
+
+/**
+ * Initialize Google Calendar OAuth flow
+ */
+function pc_init_google_calendar_oauth() {
+    require_once get_stylesheet_directory() . '/vendor/autoload.php';
+    
+    $client_id = get_option('pc_gcal_client_id', '');
+    $client_secret = get_option('pc_gcal_client_secret', '');
+    
+    if (empty($client_id) || empty($client_secret)) {
+        wp_die(__('Please enter Client ID and Client Secret first.', 'palmcode-child'));
+    }
+    
+    $client = new Google_Client();
+    $client->setClientId($client_id);
+    $client->setClientSecret($client_secret);
+    $client->setRedirectUri(pc_get_gcal_settings_page_url());
+    $client->addScope(Google_Service_Calendar::CALENDAR);
+    $client->setAccessType('offline');
+    $client->setPrompt('consent');
+    $client->setState('pc_gcal_oauth');
+    
+    $auth_url = $client->createAuthUrl();
+    wp_redirect($auth_url);
+    exit;
+}
+
+/**
+ * Complete OAuth flow and store tokens
+ */
+function pc_complete_google_calendar_oauth($code) {
+    require_once get_stylesheet_directory() . '/vendor/autoload.php';
+    
+    $client_id = get_option('pc_gcal_client_id', '');
+    $client_secret = get_option('pc_gcal_client_secret', '');
+    
+    if (empty($client_id) || empty($client_secret)) {
+        wp_die(__('Client ID and Client Secret not configured.', 'palmcode-child'));
+    }
+    
+    $client = new Google_Client();
+    $client->setClientId($client_id);
+    $client->setClientSecret($client_secret);
+    $client->setRedirectUri(pc_get_gcal_settings_page_url());
+    $client->addScope(Google_Service_Calendar::CALENDAR);
+    
+    try {
+        $token = $client->fetchAccessTokenWithAuthCode($code);
+        
+        if (isset($token['error'])) {
+            wp_die(__('Error: ' . $token['error_description'], 'palmcode-child'));
+        }
+        
+        // Store tokens
+        update_option('pc_gcal_access_token', $token['access_token']);
+        if (isset($token['refresh_token'])) {
+            update_option('pc_gcal_refresh_token', $token['refresh_token']);
+        }
+        if (isset($token['expires_in'])) {
+            update_option('pc_gcal_token_expires', time() + $token['expires_in']);
+        }
+        
+        wp_redirect(add_query_arg('authorized', '1', pc_get_gcal_settings_page_url()));
+        exit;
+    } catch (Exception $e) {
+        wp_die(__('Error: ' . $e->getMessage(), 'palmcode-child'));
+    }
+}
+
+/**
+ * Get authenticated Google Calendar client
+ */
+function pc_get_google_calendar_client() {
+    require_once get_stylesheet_directory() . '/vendor/autoload.php';
+    
+    $client_id = get_option('pc_gcal_client_id', '');
+    $client_secret = get_option('pc_gcal_client_secret', '');
+    
+    if (empty($client_id) || empty($client_secret)) {
+        return false;
+    }
+    
+    $client = new Google_Client();
+    $client->setClientId($client_id);
+    $client->setClientSecret($client_secret);
+    $client->addScope(Google_Service_Calendar::CALENDAR);
+    $client->setAccessType('offline');
+    
+    // Get stored tokens
+    $access_token = get_option('pc_gcal_access_token');
+    $refresh_token = get_option('pc_gcal_refresh_token');
+    $token_expires = get_option('pc_gcal_token_expires');
+    
+    if (empty($access_token)) {
+        return false;
+    }
+    
+    // Set access token
+    $client->setAccessToken(array(
+        'access_token' => $access_token,
+        'refresh_token' => $refresh_token,
+        'expires_in' => $token_expires ? ($token_expires - time()) : 3600,
+    ));
+    
+    // Refresh token if expired
+    if ($token_expires && time() >= $token_expires) {
+        if ($refresh_token) {
+            try {
+                $new_token = $client->refreshToken($refresh_token);
+                if (isset($new_token['access_token'])) {
+                    update_option('pc_gcal_access_token', $new_token['access_token']);
+                    if (isset($new_token['refresh_token'])) {
+                        update_option('pc_gcal_refresh_token', $new_token['refresh_token']);
+                    }
+                    if (isset($new_token['expires_in'])) {
+                        update_option('pc_gcal_token_expires', time() + $new_token['expires_in']);
+                    }
+                    $client->setAccessToken($new_token);
+                }
+            } catch (Exception $e) {
+                error_log('Google Calendar token refresh failed: ' . $e->getMessage());
+                return false;
+            }
+        } else {
+            return false;
+        }
+    }
+    
+    return $client;
+}
+
+/**
+ * Create Google Calendar event from order booking
+ */
+function pc_create_google_calendar_event($order_id) {
+    $order = wc_get_order($order_id);
+    if (!$order) {
+        return false;
+    }
+    
+    $client = pc_get_google_calendar_client();
+    if (!$client) {
+        error_log('Google Calendar: Client not authenticated');
+        return false;
+    }
+    
+    $service = new Google_Service_Calendar($client);
+    $calendar_id = get_option('pc_gcal_calendar_id', 'primary');
+    
+    // Process each order item
+    foreach ($order->get_items() as $item_id => $item) {
+        $product_id = $item->get_product_id();
+        
+        // Check if this item has booking data
+        $booking_date_format = $item->get_meta('_pc_booking_date_format') ?: $item->get_meta('pc_booking_date_format');
+        $booking_start_time = $item->get_meta('_pc_booking_start_time') ?: $item->get_meta('pc_booking_start_time');
+        $booking_end_time = $item->get_meta('_pc_booking_end_time') ?: $item->get_meta('pc_booking_end_time');
+        $booking_time = $item->get_meta('pc_booking_time');
+        $booking_capacity = $item->get_meta('pc_booking_capacity');
+        
+        if (empty($booking_date_format)) {
+            continue; // Skip items without booking data
+        }
+        
+        // Parse date from YYYYMMDD format
+        $date_obj = DateTime::createFromFormat('Ymd', $booking_date_format);
+        if (!$date_obj) {
+            error_log('Google Calendar: Invalid date format: ' . $booking_date_format);
+            continue;
+        }
+        
+        // Get product name
+        $product_name = $item->get_name();
+        
+        // Get customer info
+        $customer_name = $order->get_formatted_billing_full_name();
+        $customer_email = $order->get_billing_email();
+        $customer_phone = $order->get_billing_phone();
+        $order_number = $order->get_order_number();
+        
+        // Parse time
+        $start_datetime = null;
+        $end_datetime = null;
+        $is_all_day = false;
+        
+        if (!empty($booking_start_time) && !empty($booking_end_time)) {
+            $start_datetime = DateTime::createFromFormat('Y-m-d H:i', $date_obj->format('Y-m-d') . ' ' . $booking_start_time, new DateTimeZone('Europe/Berlin'));
+            $end_datetime = DateTime::createFromFormat('Y-m-d H:i', $date_obj->format('Y-m-d') . ' ' . $booking_end_time, new DateTimeZone('Europe/Berlin'));
+        } elseif (!empty($booking_time)) {
+            // Parse time from format "HH:MM - HH:MM"
+            $time_parts = explode(' - ', $booking_time);
+            if (count($time_parts) === 2) {
+                $start_time = trim($time_parts[0]);
+                $end_time = trim($time_parts[1]);
+                $start_datetime = DateTime::createFromFormat('Y-m-d H:i', $date_obj->format('Y-m-d') . ' ' . $start_time, new DateTimeZone('Europe/Berlin'));
+                $end_datetime = DateTime::createFromFormat('Y-m-d H:i', $date_obj->format('Y-m-d') . ' ' . $end_time, new DateTimeZone('Europe/Berlin'));
+            }
+        }
+        
+        // If no time, create all-day event
+        if (!$start_datetime || !$end_datetime) {
+            $is_all_day = true;
+            $start_datetime = clone $date_obj;
+            $start_datetime->setTime(0, 0, 0);
+            $start_datetime->setTimezone(new DateTimeZone('Europe/Berlin'));
+            $end_datetime = clone $start_datetime;
+            $end_datetime->modify('+1 day');
+        }
+        
+        // Build event details
+        $event_details = sprintf(
+            __('Order #%s - %s', 'palmcode-child') . "\n\n",
+            $order_number,
+            $product_name
+        );
+        
+        $event_details .= __('Customer Information:', 'palmcode-child') . "\n";
+        $event_details .= __('Name:', 'palmcode-child') . ' ' . $customer_name . "\n";
+        $event_details .= __('Email:', 'palmcode-child') . ' ' . $customer_email . "\n";
+        if ($customer_phone) {
+            $event_details .= __('Phone:', 'palmcode-child') . ' ' . $customer_phone . "\n";
+        }
+        
+        if (!empty($booking_capacity)) {
+            $event_details .= "\n" . __('Capacity:', 'palmcode-child') . ' ' . $booking_capacity . "\n";
+        }
+        
+        $event_details .= "\n" . __('Booking Date:', 'palmcode-child') . ' ' . $date_obj->format('d.m.Y');
+        if (!empty($booking_time)) {
+            $event_details .= ' ' . $booking_time;
+        }
+        
+        // Create event
+        $event = new Google_Service_Calendar_Event();
+        $event->setSummary(sprintf(__('Booking: %s', 'palmcode-child'), $product_name));
+        $event->setDescription($event_details);
+        $event->setLocation(get_bloginfo('name'));
+        
+        // Set event time
+        if ($is_all_day) {
+            $start = new Google_Service_Calendar_EventDateTime();
+            $start->setDate($start_datetime->format('Y-m-d'));
+            $event->setStart($start);
+            
+            $end = new Google_Service_Calendar_EventDateTime();
+            $end->setDate($end_datetime->format('Y-m-d'));
+            $event->setEnd($end);
+        } else {
+            $start = new Google_Service_Calendar_EventDateTime();
+            $start->setDateTime($start_datetime->format('Y-m-d\TH:i:s'));
+            $start->setTimeZone('Europe/Berlin');
+            $event->setStart($start);
+            
+            $end = new Google_Service_Calendar_EventDateTime();
+            $end->setDateTime($end_datetime->format('Y-m-d\TH:i:s'));
+            $end->setTimeZone('Europe/Berlin');
+            $event->setEnd($end);
+        }
+        
+        // Add customer as attendee
+        if (!empty($customer_email)) {
+            $attendee = new Google_Service_Calendar_EventAttendee();
+            $attendee->setEmail($customer_email);
+            $attendee->setDisplayName($customer_name);
+            $event->setAttendees(array($attendee));
+        }
+        
+        try {
+            $created_event = $service->events->insert($calendar_id, $event);
+            
+            // Store event ID in order meta for reference
+            $order->update_meta_data('_pc_gcal_event_id_' . $item_id, $created_event->getId());
+            $order->save();
+            
+            error_log('Google Calendar: Event created successfully - ' . $created_event->getId());
+            return $created_event->getId();
+        } catch (Exception $e) {
+            error_log('Google Calendar: Failed to create event - ' . $e->getMessage());
+            return false;
+        }
+    }
+    
+    return true;
+}
+
+/**
+ * Hook into order processing to create calendar events
+ */
+add_action('woocommerce_checkout_order_processed', 'pc_create_calendar_event_on_order', 20, 3);
+function pc_create_calendar_event_on_order($order_id, $posted_data, $order) {
+    // Only create events for orders with booking items
+    $has_booking = false;
+    foreach ($order->get_items() as $item) {
+        $booking_date_format = $item->get_meta('_pc_booking_date_format') ?: $item->get_meta('pc_booking_date_format');
+        if (!empty($booking_date_format)) {
+            $has_booking = true;
+            break;
+        }
+    }
+    
+    if ($has_booking) {
+        pc_create_google_calendar_event($order_id);
+    }
+}
+

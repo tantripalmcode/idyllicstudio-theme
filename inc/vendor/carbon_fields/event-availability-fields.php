@@ -149,4 +149,3 @@ if (!function_exists('pc_register_event_availability_fields')) {
 
     add_action('carbon_fields_register_fields', 'pc_register_event_availability_fields');
 }
-

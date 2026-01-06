@@ -88,6 +88,11 @@ if( is_admin() ){
 require_once PC_CHILD_VENDOR_PATH . '/carbon_fields/event-availability-fields.php';
 
 /**
+ * Load Google Calendar Settings
+ */
+require_once PC_CHILD_VENDOR_PATH . '/woocommerce/google-calendar-settings.php';
+
+/**
  * Load WooCommerce Product Booking
  */
 require_once PC_CHILD_VENDOR_PATH . '/woocommerce/product-booking.php';

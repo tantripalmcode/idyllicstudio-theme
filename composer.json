@@ -1,0 +1,6 @@
+{
+    "require": {
+        "google/apiclient": "^2.15",
+        "htmlburger/carbon-fields": "^3.6"
+    }
+}
