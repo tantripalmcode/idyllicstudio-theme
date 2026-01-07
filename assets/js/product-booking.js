@@ -7,8 +7,11 @@
     function initProductBooking() {
         const $bookingDateField = $('#pc-booking-date');
         const $bookingTimeField = $('#pc-booking-time');
+        const $bookingTimeValue = $('#pc-booking-time-value');
+        const $timeDropdown = $('#pc-time-dropdown');
         const $timeGroup = $('.pc-booking-time-group');
         const $availabilityInfo = $('.pc-availability-info');
+        const $loadingIcon = $('.pc-booking-loading');
         const $productId = $('#pc-product-id').val();
         const $addToCartButton = $('button.single_add_to_cart_button, .single_add_to_cart_button');
         const $quantityField = $('input[name="quantity"]');
@@ -20,6 +23,7 @@
         let availableDates = [];
         let closeDates = [];
         let availabilityMode = 'weekly';
+        let lastTimeOptionsHtml = ''; // Store last time options to rebuild dropdown if needed
 
         /**
          * Get initial availability data
@@ -110,9 +114,14 @@
                     $('#pc-booking-date-format').attr('name', 'pc_booking_date_format');
 
                     // Reset time
-                    $bookingTimeField.val('').prop('disabled', true);
+                    $bookingTimeField.val('').removeClass('pc-selected');
+                    $bookingTimeValue.val('');
+                    $timeDropdown.html('').removeClass('active');
                     $timeGroup.hide();
                     $availabilityInfo.html('');
+
+                    // Show loading icon
+                    $loadingIcon.show();
 
                     // Check availability
                     checkAvailability(formattedDate, displayDate, '');
@@ -150,6 +159,8 @@
                     // Only hide time group if no time is selected yet
                     if (!timeSelected) {
                         $timeGroup.hide();
+                        // Show loading icon when checking availability for time slots
+                        $loadingIcon.show();
                     }
                     $availabilityInfo.html('');
                 },
@@ -168,15 +179,49 @@
                             availabilityMode = data.availability_mode;
                         }
 
+                        // Hide loading icon
+                        $loadingIcon.hide();
+
                         // Show time field if needed (when no time is selected yet)
                         if (data.show_time && data.time_options && !timeSelected) {
-                            $bookingTimeField.html(data.time_options);
+                            buildCustomTimeDropdown(data.time_options);
                             $bookingTimeField.prop('disabled', false);
                             $timeGroup.show();
                         } else if (timeSelected) {
                             // If time is already selected, keep the time group visible
                             $timeGroup.show();
                             $bookingTimeField.prop('disabled', false);
+                            
+                            // Only rebuild dropdown if it's empty or if we have new time_options
+                            const dropdownHasOptions = $timeDropdown.children('.pc-time-option').length > 0;
+                            
+                            if (data.time_options) {
+                                // Store new options
+                                lastTimeOptionsHtml = data.time_options;
+                                
+                                // Only rebuild if dropdown is empty or options have changed
+                                if (!dropdownHasOptions) {
+                                    buildCustomTimeDropdown(data.time_options, timeSelected);
+                                } else {
+                                    // Just update the selected state without rebuilding
+                                    $timeDropdown.find('.pc-time-option').removeClass('selected');
+                                    $timeDropdown.find('.pc-time-option[data-value="' + timeSelected + '"]').addClass('selected');
+                                }
+                                
+                                // Update display field with selected time text
+                                const $temp = $('<div>').html(data.time_options);
+                                const $selectedOption = $temp.find('option[value="' + timeSelected + '"]');
+                                if ($selectedOption.length) {
+                                    $bookingTimeField.val($selectedOption.text()).addClass('pc-selected');
+                                }
+                            } else if (!dropdownHasOptions && lastTimeOptionsHtml) {
+                                // Only rebuild if dropdown is empty and we have stored options
+                                buildCustomTimeDropdown(lastTimeOptionsHtml, timeSelected);
+                            } else if (dropdownHasOptions) {
+                                // Just update the selected state if dropdown already has options
+                                $timeDropdown.find('.pc-time-option').removeClass('selected');
+                                $timeDropdown.find('.pc-time-option[data-value="' + timeSelected + '"]').addClass('selected');
+                            }
                         }
 
                         // Show availability info only when both date and time are selected
@@ -191,6 +236,8 @@
                             $addToCartButton.prop('disabled', false);
                         }
                     } else {
+                        // Hide loading icon on error
+                        $loadingIcon.hide();
                         if (response.data && response.data.message) {
                             $availabilityInfo.html('<span class="pc-error-text">' + response.data.message + '</span>');
                         }
@@ -198,15 +245,101 @@
                 },
                 error: function (xhr, status, error) {
                     console.error('AJAX Error:', error);
+                    // Hide loading icon on error
+                    $loadingIcon.hide();
                     $availabilityInfo.html('<span class="pc-error-text">Fehler beim Laden der Verfügbarkeit.</span>');
                 }
             });
         }
 
         /**
-         * Handle time field change
+         * Build custom time dropdown from HTML options
          */
-        $bookingTimeField.on('change', function () {
+        function buildCustomTimeDropdown(timeOptionsHtml, selectedValue = '') {
+            // Store the time options HTML for later use
+            lastTimeOptionsHtml = timeOptionsHtml;
+            
+            // Parse the HTML to extract option values and text
+            const $temp = $('<div>').html(timeOptionsHtml);
+            const $options = $temp.find('option');
+            
+            $timeDropdown.html('');
+            
+            $options.each(function() {
+                const $option = $(this);
+                const value = $option.attr('value');
+                const text = $option.text();
+                
+                if (value === '') {
+                    // Skip placeholder option
+                    return;
+                }
+                
+                const $timeOption = $('<div>')
+                    .addClass('pc-time-option')
+                    .attr('data-value', value)
+                    .text(text);
+                
+                if (value === selectedValue) {
+                    $timeOption.addClass('selected');
+                }
+                
+                $timeOption.on('click', function(e) {
+                    e.stopPropagation();
+                    const selectedTime = $(this).attr('data-value');
+                    $bookingTimeField.val(text).addClass('pc-selected');
+                    $bookingTimeValue.val(selectedTime);
+                    $timeDropdown.removeClass('active');
+                    
+                    // Remove selected class from all options
+                    $timeDropdown.find('.pc-time-option').removeClass('selected');
+                    // Add selected class to clicked option
+                    $(this).addClass('selected');
+                    
+                    // Trigger availability check
+                    const formattedDate = $('#pc-booking-date-format').val();
+                    const dateText = $bookingDateField.val();
+                    if (formattedDate) {
+                        checkAvailability(formattedDate, dateText, selectedTime);
+                    }
+                });
+                
+                $timeDropdown.append($timeOption);
+            });
+        }
+
+        /**
+         * Handle time field click to toggle dropdown
+         */
+        $bookingTimeField.on('click', function(e) {
+            if ($(this).prop('disabled')) {
+                return;
+            }
+            e.stopPropagation();
+            
+            // If dropdown is empty but we have stored options, rebuild it
+            if ($timeDropdown.children().length === 0 && lastTimeOptionsHtml) {
+                const currentSelected = $bookingTimeValue.val();
+                buildCustomTimeDropdown(lastTimeOptionsHtml, currentSelected);
+            }
+            
+            // Toggle dropdown visibility
+            $timeDropdown.toggleClass('active');
+        });
+
+        /**
+         * Close dropdown when clicking outside
+         */
+        $(document).on('click', function(e) {
+            if (!$(e.target).closest('.pc-booking-time-wrapper').length) {
+                $timeDropdown.removeClass('active');
+            }
+        });
+
+        /**
+         * Handle time field change (for form validation)
+         */
+        $bookingTimeValue.on('change', function () {
             const timeSelected = $(this).val();
             const formattedDate = $('#pc-booking-date-format').val();
             const dateText = $bookingDateField.val();
@@ -227,7 +360,7 @@
         $('form.cart').on('submit', function (e) {
             const date = $('#pc-booking-date').val();
             const dateFormat = $('#pc-booking-date-format').val();
-            const time = $bookingTimeField.val();
+            const time = $bookingTimeValue.val();
             const quantity = $quantityField.val();
 
             // Validate all fields are filled
@@ -271,10 +404,10 @@
             // Ensure all fields have name attributes for form submission
             $('#pc-booking-date').attr('name', 'pc_booking_date');
             $('#pc-booking-date-format').attr('name', 'pc_booking_date_format');
-            $bookingTimeField.attr('name', 'pc_booking_time');
+            $bookingTimeValue.attr('name', 'pc_booking_time');
 
             // Double-check all values are present
-            if (!$('#pc-booking-date').val() || !$('#pc-booking-date-format').val() || !$bookingTimeField.val() || !$quantityField.val()) {
+            if (!$('#pc-booking-date').val() || !$('#pc-booking-date-format').val() || !$bookingTimeValue.val() || !$quantityField.val()) {
                 e.preventDefault();
                 alert('Bitte füllen Sie alle Felder aus.');
                 return false;
@@ -284,7 +417,7 @@
             console.log('Submitting booking data:', {
                 date: $('#pc-booking-date').val(),
                 dateFormat: $('#pc-booking-date-format').val(),
-                time: $bookingTimeField.val(),
+                time: $bookingTimeValue.val(),
                 quantity: $quantityField.val()
             });
         });

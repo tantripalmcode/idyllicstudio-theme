@@ -28,11 +28,17 @@ function pc_add_product_booking_fields() {
             <input type="hidden" id="pc-booking-date-format" name="pc_booking_date_format" />
         </div>
         
+        <div class="pc-booking-loading" style="display: none;">
+            <div class="pc-booking-spinner"></div>
+        </div>
+        
         <div class="pc-booking-field-group pc-booking-time-group" style="display: none;">
             <label for="pc-booking-time"><?php _e('Zeit', 'palmcode-child'); ?> <span class="required">*</span></label>
-            <select id="pc-booking-time" name="pc_booking_time" class="pc-booking-time">
-                <option value=""><?php _e('Zeit wählen', 'palmcode-child'); ?></option>
-            </select>
+            <div class="pc-booking-time-wrapper">
+                <input type="text" id="pc-booking-time" name="pc_booking_time" class="pc-booking-time-custom" placeholder="<?php _e('Zeit wählen', 'palmcode-child'); ?>" readonly />
+                <input type="hidden" id="pc-booking-time-value" name="pc_booking_time" />
+                <div class="pc-time-dropdown" id="pc-time-dropdown"></div>
+            </div>
         </div>
         
         <div class="pc-availability-info"></div>
