@@ -70,24 +70,42 @@
                 dateFormat: 'MM dd, yy', // Use 'yy' instead of 'yyyy' to avoid double year issue
                 beforeShowDay: function (date) {
                     const dateString = $.datepicker.formatDate('yy-mm-dd', date);
-                    const day = date.getDay();
+                    const dayOfWeek = date.getDay();
+                    let classes = '';
+                    let isSelectable = true;
 
                     // Check if date is closed
                     if (closeDates && closeDates.indexOf(dateString) !== -1) {
                         return [false, 'date-closed', 'Closed'];
                     }
 
+                    // Check if this is the selected date
+                    const selectedDateFormat = $('#pc-booking-date-format').val();
+                    console.log(selectedDateFormat);
+                    if (selectedDateFormat && selectedDateFormat.length === 8) {
+                        // Convert YYYYMMDD to yy-mm-dd format for comparison
+                        const year = selectedDateFormat.substring(0, 4);
+                        const month = selectedDateFormat.substring(4, 6);
+                        const day = selectedDateFormat.substring(6, 8);
+                        const selectedDateString = year + '-' + month + '-' + day;
+                        
+                        if (dateString === selectedDateString) {
+                            classes = 'pc-date-selected';
+                        }
+                    }
+
                     // For weekly mode, only allow Tuesday (2) through Sunday (0)
                     if (availabilityMode === 'weekly') {
                         // Sunday is 0, Tuesday is 2, etc.
                         // Allow: Tuesday (2), Wednesday (3), Thursday (4), Friday (5), Saturday (6), Sunday (0)
-                        return [day === 0 || (day >= 2 && day <= 6), ''];
+                        isSelectable = dayOfWeek === 0 || (dayOfWeek >= 2 && dayOfWeek <= 6);
+                        return [isSelectable, classes, ''];
                     } else {
                         // For specific dates mode, check available dates
                         if (availableDates && availableDates.length > 0 && availableDates !== 'everyday') {
-                            return [availableDates.indexOf(dateString) !== -1, ''];
+                            isSelectable = availableDates.indexOf(dateString) !== -1;
                         }
-                        return [true, ''];
+                        return [isSelectable, classes, ''];
                     }
                 },
                 onSelect: function (dateText, inst) {
@@ -113,6 +131,10 @@
                     $bookingDateField.attr('name', 'pc_booking_date');
                     $('#pc-booking-date-format').attr('name', 'pc_booking_date_format');
 
+                    // Refresh datepicker to show selected date with active class
+                    // Close and reopen to trigger beforeShowDay for all dates
+                    $bookingDateField.datepicker('hide');
+                    
                     // Reset time
                     $bookingTimeField.val('').removeClass('pc-selected');
                     $bookingTimeValue.val('');
@@ -125,6 +147,11 @@
 
                     // Check availability
                     checkAvailability(formattedDate, displayDate, '');
+                },
+                beforeShow: function(input, inst) {
+                    // Refresh datepicker when it opens to ensure selected date is highlighted
+                    // The beforeShowDay callback will be called for each date and add the active class
+                    return true;
                 }
             });
         }

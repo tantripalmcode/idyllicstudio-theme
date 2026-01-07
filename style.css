@@ -1104,6 +1104,21 @@ body.home .pc-booking-form .pc-booking-form__content {
   100% { transform: rotate(360deg); }
 }
 
+/* Datepicker Selected Date Styling */
+.ui-datepicker .ui-datepicker-calendar td a.pc-date-selected,
+.ui-datepicker .ui-datepicker-calendar td.pc-date-selected a {
+  background: var(--heavy-color) !important;
+  color: #fff !important;
+  font-weight: 600;
+  border-radius: 4px;
+}
+
+.ui-datepicker .ui-datepicker-calendar td a.pc-date-selected:hover,
+.ui-datepicker .ui-datepicker-calendar td.pc-date-selected a:hover {
+  background-color: var(--button-color-hover) !important;
+  color: #fff !important;
+}
+
 /* Product Booking Fields Styling */
 .pc-product-booking-fields {
   margin: 24px 0;
