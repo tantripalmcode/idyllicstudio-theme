@@ -103,12 +103,54 @@ function pc_get_payment_note() {
 }
 
 /**
+ * Override product price display on product loop (shop, category, tag pages)
+ * Shows display price as main price and WooCommerce price as deposit
+ */
+add_filter('woocommerce_get_price_html', 'pc_override_product_loop_price_display', 10, 2);
+function pc_override_product_loop_price_display($price_html, $product) {
+    // Only apply on shop, category, and tag pages (product loop)
+    if (!is_shop() && !is_product_category() && !is_product_tag() && !is_product_taxonomy()) {
+        return $price_html;
+    }
+    
+    // Get custom display price
+    $display_price = pc_get_display_price($product->get_id());
+    
+    // If display price is set, show it with deposit info
+    if ($display_price !== false) {
+        // Format the display price using WooCommerce price formatting
+        $formatted_price = wc_price($display_price);
+        
+        // Add price suffix if product has one
+        $price_suffix = $product->get_price_suffix();
+        if ($price_suffix) {
+            $formatted_price .= $price_suffix;
+        }
+        
+        // Show the WooCommerce price as deposit below the display price
+        $regular_price = $product->get_regular_price();
+        
+        // Only show deposit if prices differ
+        if ($display_price != $regular_price && $regular_price) {
+            $formatted_price .= '<br><small style="color: #7F7F7E; font-size: 0.9em;">' . 
+                sprintf(__('Deposit: %s', 'palmcode-child'), wc_price($regular_price)) . 
+                '</small>';
+        }
+        
+        return $formatted_price;
+    }
+    
+    // If no custom display price, return original price
+    return $price_html;
+}
+
+/**
  * Override product price display on single product page, cart, and checkout
  * Uses custom display price field for display, but regular WooCommerce price is still used for actual payment calculations
  */
-add_filter('woocommerce_get_price_html', 'pc_override_product_price_display', 10, 2);
+add_filter('woocommerce_get_price_html', 'pc_override_product_price_display', 20, 2);
 function pc_override_product_price_display($price_html, $product) {
-    // Skip on shop, category, and tag pages
+    // Skip on shop, category, and tag pages (handled by pc_override_product_loop_price_display)
     if (is_shop() || is_product_category() || is_product_tag() || is_product_taxonomy()) {
         return $price_html;
     }
